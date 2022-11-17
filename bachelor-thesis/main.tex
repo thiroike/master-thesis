@@ -1,0 +1,112 @@
+%#!pdfpLaTeX
+%
+% 古居研究室用卒業論文・特別論文のTeXテンプレートファイル
+% 本ファイルは非公式である．
+%
+% 2022年11月17日 古居彬作成
+%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% 論文情報 %%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% テンプレート選択 %%%%%
+\documentclass[bachelor,12pt]{infhu} % 卒論 日本語用
+%\documentclass[bachelor,english,12pt]{infhu} % 卒論 英語用
+% \documentclass[master,12pt]{infhu} % 修論 日本語用
+%\documentclass[master,english,12pt]{infhu} % 修論 英語用
+
+%%%%% パッケージのインポート（必要に応じて追加する） %%%%%
+\usepackage{amsmath, amssymb}
+\usepackage[dvipdfmx]{color}
+\usepackage[dvipdfmx]{graphicx}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{multirow}
+
+\title{論文タイトル} % 途中で改行する場合は\\で区切る
+%¥titlewidth{} % タイトル幅 (指定するときは単位つきで)
+
+
+%%%%% 著者 %%%%%
+\author{広大 太郎}
+\eauthor{Taro Hirodai} % Copyright表示で使われる
+
+%%%% 学籍番号 %%%%
+\studentid{B123456}
+
+%%%%% 指導教員名 %%%%%
+\supervisor{古居　彬 助教} % 1つ引数をとる (役職まで含めて書く)
+%\supervisor{指導教員名 役職 \and 指導教員名 役職}% 複数教員の場合，¥and でつなげる
+
+%%%%% 提出年月 %%%%%
+\date{令和X年X月X日} % 和暦表示
+%\handin{2020}{2} % 西暦表示
+
+\begin{document}
+\maketitle % タイトル生成
+\setlength{\baselineskip}{20pt} % 行間を設定
+
+%%%%% 目次 %%%%%
+{\makeatletter
+\let\ps@jpl@in\ps@empty
+\makeatother
+\pagestyle{empty}
+\tableofcontents
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% 本文 %%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\section{はじめに}
+\input{section/1_introduction.tex}
+
+\clearpage
+\section{関連研究}
+\input{section/2_related_work.tex}
+
+\clearpage
+\section{提案法}
+\input{section/3_proposed_method.tex}
+
+\clearpage
+\section{実験}
+\input{section/4_experiments.tex}
+
+\clearpage
+\section{結論}
+\input{section/5_conclusion.tex}
+
+
+\clearpage
+\section*{謝辞}
+\addcontentsline{toc}{section}{謝辞}
+\input{section/acknowledgement.tex}
+
+%%%%% 参考文献（BibTeXを使う場合） %%%%%
+\clearpage
+\addcontentsline{toc}{section}{\refname} % 参考文献を目次に表示
+\bibliographystyle{bibstyle} % bstファイルを設定
+\bibliography{references} % bibファイルを読み込み
+
+%%%%% 参考文献（直接書く場合） %%%%%
+% \clearpage
+% \addcontentsline{toc}{section}{\refname} % 参考文献を目次に表示
+% \begin{thebibliography}{99}
+    % \bibitem{Furui2019-bz}
+    % A.~Furui, S.~Eto, K.~Nakagaki, K.~Shimada, G.~Nakamura, A.~Masuda, T.~Chin, and
+    %   T.~Tsuji,
+    % \newblock ``A myoelectric prosthetic hand with muscle synergy-based motion
+    %   determination and impedance model-based biomimetic control,''
+    % \newblock {\em Science Robotics}, vol. 4, no. 31, pp. eaaw6339, 2019.
+    
+    % \bibitem{Furui2021-ts}
+    % A.~Furui, T.~Igaue, and T.~Tsuji,
+    % \newblock ``{EMG} pattern recognition via {Bayesian} inference with scale
+    %   mixture-based stochastic generative models,''
+    % \newblock {\em Expert Systems with Applications}, vol. 185, pp. 115644, 2021.
+% \end{thebibliography}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%% 付録 %%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\appendix
+\section{何とかの導出}
+\input{section/appendix.tex}
+
+\end{document}
