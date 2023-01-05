@@ -4,8 +4,12 @@ Unofficial LaTeX templates for graduation thesis and its proceeding in School of
 
 ## Usage
 
-- `bachelor-proc` (in preparation): LaTeX template for writing 2-page proceeding of graduation thesis for bachelor students
+### For bachelor students
+- `bachelor-proc` : LaTeX template for writing 2-page proceeding of graduation thesis for bachelor students
 - `bachelor-thesis` : LaTeX template for writing graduation thesis for bachelor students
+
+### For master students
+
 - `master-proc` (in preparation): LaTeX template for writing 5-page proceeding (plus up to 1 page of references) of graduation thesis for master students
 - `master-thesis` (in preparation): LaTeX template for writing graduation thesis for master students
 
