@@ -49,6 +49,30 @@
 \captionsetup[table]{format=plain, font=small}
 
 
+% bibliography setting =====================================
+\renewenvironment{thebibliography}[1]
+{\section*{\refname\@mkboth{\refname}{\refname}}%
+  \list{\@biblabel{\@arabic\c@enumiv}}%
+       {\settowidth\labelwidth{\@biblabel{#1}}%
+        \leftmargin\labelwidth
+        \advance\leftmargin\labelsep
+ \setlength\itemsep{-0.2zh} % ←ここの数値を調整(行間のつまり具合)
+%  \setlength\baselineskip{10pt} % ←ここの数値を調整（追加）(文字の大きさ)
+        \@openbib@code
+        \usecounter{enumiv}%
+        \let\p@enumiv\@empty
+        \renewcommand\theenumiv{\@arabic\c@enumiv}}%
+  \sloppy
+  \clubpenalty4000
+  \@clubpenalty\clubpenalty
+  \widowpenalty4000%
+  \sfcode`\.\@m}
+ {\def\@noitemerr
+   {\@latex@warning{Empty `thebibliography' environment}}%
+  \endlist}
+ 
+
+
 % section ==========================================
 \makeatletter
 \def\section{\@startsection {section}{1}{\z@}%
@@ -131,3 +155,5 @@
 \def\studentid#1{\gdef\@studentid{#1}} % add
 \def\proceedingname#1{\gdef\@proceedingname{#1}} % add
 \makeatother
+
+
