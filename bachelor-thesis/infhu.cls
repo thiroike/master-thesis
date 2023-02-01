@@ -61,7 +61,7 @@
 \ifdim \fullwidth>42zw
   \setlength{\fullwidth}{42zw}
 \fi
-\setlength{\textwidth}{\fullwidth}
+\setlength{\textwidth}{0.92\fullwidth}
 \setlength{\oddsidemargin}{\paperwidth}
 \addtolength{\oddsidemargin}{-\textwidth}
 \setlength{\oddsidemargin}{.5\oddsidemargin}
@@ -134,7 +134,7 @@
     Hiroshima University}%
   \else
     \gdef\@subtitle{卒業論文}
-    \gdef\@belongsto{広島大学情報科学部\\%
+    \gdef\@belongsto{広島大学 情報科学部 情報科学科\\%
         データサイエンスコース}%
   \fi
 \else
@@ -143,7 +143,8 @@
       Graduate School of Advanced Science and Engineering\\%
       Hiroshima University}%
   \else
-    \gdef\@belongsto{広島大学大学院先進理工系科学研究科情報科学プログラム}%
+    \gdef\@belongsto{広島大学 大学院先進理工系科学研究科 \\%
+        情報科学プログラム}%
   \fi
   \if@english
     \gdef\@subtitle{Master's~Thesis}
