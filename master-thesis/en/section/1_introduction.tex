@@ -1,0 +1,16 @@
+This is a LaTeX format template intended for use in Master's theses at the Graduate School of Advanced Science and Engineering, Information Sciences Program, Hiroshima University. The chapter and section structure is tentative; please modify it according to your content. Do not modify font sizes or line spacing as these changes may disrupt the layout.
+
+When citing previous literature in the text, use the \verb|\cite| command. Use the citation key listed in the reference list, writing it as:
+
+\noindent ``\verb|...a method has been proposed based on~\cite{Furui2019-bz}.|'' (The \verb|~| prevents the citation symbol from being separated to the next line).
+
+By labeling figures and equations using the \verb|\label{label_name}| command, you can easily retrieve figure or equation numbers in the text by writing \verb|\ref{label}|. For example, a figure labeled with \verb|\label{fig:method}| can be cited as
+
+\noindent ``\verb|The proposed method is shown in Fig.~\ref{fig:method}|'', and an equation labeled with \verb|\label{eq:model}| can be cited as 
+
+\noindent ``\verb|As shown in equation (\ref{eq:model})...|''. Avoid manually typing figure or equation numbers.
+
+Various other LaTeX command examples are provided in the following chapters for reference. Note that figures (illustrations and graphs) should be prepared as PDF files. The method for inserting figure files is described in Chapter 3.
+
+In the following, Chapter 2 describes a methodology and various closely related existing methods. Chapter 3 explains the proposed XX, and Chapter 4 describes the experimental method, results, and discussion. Finally, Chapter 5 presents the conclusions and future work.
+

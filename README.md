@@ -12,7 +12,8 @@ Unofficial LaTeX templates for graduation thesis and its proceeding in School of
 
 - `master-interim` : LaTeX template for writing interim proceeding of graduation thesis for master students
 - `master-proc` (*in preparation*): LaTeX template for writing 5-page proceeding (plus up to 1 page of references) of graduation thesis for master students
-- `master-thesis` (*in preparation*): LaTeX template for writing graduation thesis for master students
+- `master-thesis` : LaTeX template for writing graduation thesis for master students
+  - There are Japanese (`jp/`) and English (`en/`) versions
 
 
 ## How to build
