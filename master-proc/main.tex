@@ -1,35 +1,57 @@
-\documentclass[10pt, a4paper, twocolumn]{jarticle}
-%\documentclass[10pt, a4paper, twocolumn, uplatex]{jsarticle}
-\usepackage{proceeding_master}
+\documentclass[a4paper,platex,dvipdfmx,twocolumn]{jsarticle} 
+\usepackage[left=20mm, right=20mm, top=20mm, bottom=20mm]{geometry}
+\usepackage{graphicx}
 \usepackage{tabularx, amssymb}
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{afterpage}
+\usepackage{titlesec}
 
-% Title info. ======================================
-\studentid{ＭXXXXXX}
-\program{情報科学プログラム}
-\author{土肥　正}
-\supervisor{越智　満夫}
-\title{卒業論文発表要旨の様式}
-% ================================================
+\makeatletter
+% --- \section の書式を jsarticle シングルカラムと同じ程度に ---
+\titleformat{\section}{\reset@font\Large\gtfamily\bfseries}{\thesection}{1em}{}
+
+% --- \subsection の書式を jsarticle シングルカラムと同じ程度に ---
+\titleformat{\subsection}{\reset@font\large\gtfamily\bfseries}{\thesubsection}{1em}{}
+
+% \titlespacing*{\section}{0pt}{2.3\baselineskip plus 0.5\baselineskip minus 0.2\baselineskip}{0.9\baselineskip}
+
+% \titlespacing*{\subsection}{0pt}{1.5\baselineskip plus 0.4\baselineskip minus 0.2\baselineskip}{0.5\baselineskip}
+
+% % タイトルと表のための独立したページ用のマクロを定義
+% \makeatletter
+\def\@maketitle{%
+  \begin{center}
+    {\LARGE 修 士 論 文 要 旨\par}
+    \vspace{6pt}
+    {Summary of the Master's Thesis\par}
+    \vspace{20pt}
+    % 表をタイトルページの一部として組み込む
+    \begin{tabular}{|p{25mm}|p{50mm}|p{25mm}|p{50mm}|}
+      \hline
+      \centering{学 生 番 号} & Ｍ & \centering{プ ロ グ ラ ム} & 情報科学プログラム\\
+      \centering{\scriptsize{Student ID number}} && \centering{\scriptsize{Program}} & \\
+      \hline
+      \centering{氏　　　名} & & \centering{主 指 導 教 員} & \\
+      \centering{\scriptsize{Name}} && \centering{\scriptsize{Supervisor}} & \\
+      \hline
+      \centering{論 文 題 目} & \multicolumn{3}{|l|}{}\\
+      \centering{\scriptsize{Thesis Title}} & \multicolumn{3}{|l|}{}\\
+      \hline
+    \end{tabular}
+  \end{center}
+  \vspace{30pt}  % タイトルと本文の間のスペース
+}
+% \makeatother
 
 \begin{document}
-\maketitle
+% タイトルと表を表示
+\twocolumn[{\maketitle}]
 
-%%% Please write your body text from here %%
 \section{はじめに}
-卒業論文発表予稿の様式サンプルです．
+これは広島大学大学院先進理工系科学研究科情報科学プログラムの修士論文要旨のテンプレートです。図表使用可，6ページ以内で記述してください。節の名前は適宜変更してください。
 
-
-発表予稿を\TeX{}で作成する場合は，
-スタイルファイル\verb+proceedings_master.sty+を利用してください．
-
-
-その他の方法で発表予稿を作成する場合は，この様式を参考にしてください．
-
-
-ただし，研究分野で特有の書式がある場合には，その様式に従ってください．
+This is a template for a summary of the master's thesis in the Informatics and Data Science Program of the Graduate School of Advanced Science and Engineering, Hiroshima University. Figures and tables may be included; maximum length is 6 pages. Change the section names as appropriate.
 
 
 \section{数式の記述}
@@ -125,22 +147,8 @@ Minkowski Islandは4つのMinkowski Sausage (Quadratic type 2 curve) を
 \section{まとめ}
 卒業論文発表予稿の様式を示しました．
 
-%%%%% 参考文献（BibTeXを使う場合） %%%%%
-\bibliographystyle{bibstyle} % bstファイルを設定
-\bibliography{references} % bibファイルを読み込み
 
-%%%%% 参考文献（直接書く場合） %%%%%
-% \begin{thebibliography}{9} %\footnotesize
-    % \bibitem{kajiya1986rendering}
-    % J.~T. Kajiya,
-    % \newblock ``The rendering equation,''
-    % \newblock in {\em Proceedings of the 13th Annual Conference on Computer
-    %   Graphics and Interactive Techniques}, pp. 143--150, 1986.
-    
-    % \bibitem{jensen2001realistic}
-    % H.~W. Jensen,
-    % \newblock {\em Realistic image synthesis using photon mapping}, vol. 364,
-    % \newblock Ak Peters Natick, 2001.
-% \end{thebibliography}
+\bibliographystyle{acm}
+\bibliography{bib}
 
 \end{document}
