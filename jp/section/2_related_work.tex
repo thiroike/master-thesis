@@ -1,24 +1,74 @@
+\subsection{PolyDice Loss}
+医用画像セグメンテーションで広く使用されるDice Lossは，クラス不均衡に頑健であるが，全画像に対して固定的な形状を持つという制約がある．
+本研究では，Dice Lossを多項式展開により拡張したPolyDice Loss\cite{polydice}，特にその実用的な形式であるPolyDice-1 Lossを採用する．
+PolyDice-1 Lossは，単一のパラメータ$\epsilon$で損失関数の形状を制御でき，画像の難易度に応じて勾配の急峻さを調整することが可能となる．
 
-本章では，何らかの観点で何らかに関する関連研究を整理する．
+\subsubsection{Dice Lossの定義}
+画像サイズを $H \times W$とし，ピクセル位置を $(i, j)$ で表す
+$\left(i \in \{1, ..., H\}, j \in \{1, ..., W\}\right)$．
+セグメンテーションタスクにおいて，モデルの予測確率マップを$\hat{\mathbf{Y}} = \{\hat{y}_{i,j}\}_{i,j} \in \mathbb R ^ {H \times W}$，
+その画像に対する正解マスクを$\mathbf{Y} = \{{y}_{i,j}\}_{i,j} \in \mathbb R ^ {H \times W}$とすると，Dice Lossは次式で定義される．
 
-\subsection{何らかに基づく方法}
+\begin{equation}
+    \mathcal{L}_{\text{Dice}}(\hat{\mathbf{Y}}, \mathbf{Y}) = 1 - \frac{2 \sum_{i=1}^{W} \sum_{j=1}^{H} \hat{y}_{i, j} y_{i, j}}{\sum_{i=1}^{W} \sum_{j=1}^{H}(\hat{y_{i, j}} ^ 2 + y_{i, j} ^ 2)}
+\end{equation}
 
-従来，何らかを実現するためになんらかのアプローチが取られてきた．
-特に，何らか法~\cite{Furui2019-bz}は，何とかかんとかであり，次式で表される．
+\subsubsection{幾何学的解釈と多項式展開}
 
-\begin{align}
-    \hat{\theta} = \argmin_{\theta \in \mathcal{S}} \mathcal{J}(\theta)
-    \label{eq:conventional}
-\end{align}
+予測確率マップ$\hat{\mathbf{Y}}$と正解マスク$\mathbf{Y}$をそれぞれ長さ$HW$のベクトル$\hat{\mathbf{y}}, \mathbf{y}$
+として平坦化すると，Dice Lossは以下のように分解できる．
 
-しかしながら，(\ref{eq:conventional})式から分かるように，何とかかんとかの面でこのアプローチには問題がある．
-提案法はなんらかに基づくアプローチを取ることで，この問題を解決している．
+\begin{equation}
+    \mathcal{L}_{\text{Dice}} = 1 - s \cos  \theta
+\end{equation}
+ここで，$s = \frac{2 \langle \hat{\mathbf{y}}, {\mathbf{y}} \rangle}{\Vert \hat{\mathbf{y}} \Vert ^ 2 + \Vert {\mathbf{y}} \Vert ^ 2}$はスケール成分，
+$\theta = \frac{\langle \hat{\mathbf{y}}, {\mathbf{y}}\rangle}{\Vert \hat{\mathbf{y}} \Vert \Vert {\mathbf{y}}\Vert}$は2つの
+ベクトル間の角度を表す．この分解により，Dice Lossはスケール成分$s$と$\cos \theta$の積として理解できる．
 
-\subsection{何とかに基づく方法}
+方向成分$\cos \theta$に対してTaylor展開を適用することで，PolyDice Lossの多項式表現を導出する．
+つまり$\theta \approx 0$（予測と正解が大きく異ならない）と仮定し，$\cos{\theta}$を$\theta = 0$まわりでテイラー展開すると以下のように近似できる．
+\begin{equation}
+    \cos{\theta} = 1 - \frac{\theta ^ 2}{2!} + \frac{\theta ^ 4}{4!} - \cdots
+\end{equation}
+これをDice Lossに代入し，整理するとPolyDiceの一般形が得られる：
 
-一方，何らかかんとかを改善した方法として何らかに基づくアプローチも提案されてきた．
-なかでも，何らか法~\cite{Furui2021-ts}はなんとかかんとかが可能である．
+\begin{equation}
+    \mathcal{L}_{\text{PolyDice}} = (1 - s) + s \sum_{k = 1}^{\infty} \alpha_k \theta ^ {2k}
+\end{equation}
+ここで， $\alpha_k=\frac{(-1)^{k-1}}{(2k)!}$は各Taylor項の符号係数である．
 
-しかしながら，この方法にも何とかに起因する問題が存在しており，何とかに限界があった．
-これに対し提案法では，何とかかんとかすることで，何らかが可能である．
+\subsubsection{PolyDice-1 Loss}
+
+実用的な観点から，\cite{leng2022polyloss}のアプローチに従い，第$1$項のみを調整可能とするPolyDice-1 Lossを採用する：
+\begin{equation}
+    \mathcal{L}_{\text{PolyDice-1}} = (1 - s) + s \left(\frac{1}{2} + \epsilon\right) \theta^2
+\end{equation}
+ここで，$\epsilon \in \mathbb{R}$は損失関数の形状を制御するハイパーパラメータである．
+図\ref{polydice}に，$\epsilon$に応じたPolyDice-1 Lossの形状変化を示す．
+$\epsilon > 0$では予測誤差に対するペナルティが強化され，$\epsilon < 0$では緩和される．
+
+\clearpage
+
+\begin{figure}
+    \includegraphics[width=\columnwidth]{figure/loss.pdf}
+    \caption{Plot of PolyDice-1 Loss($s = 0.1$)}
+    \label{polydice}
+\end{figure}
+
+\clearpage
+
+\subsection{MC Dropoutの原理と応用}
+
+Dropoutは元々，ニューラルネットワークの過学習を防ぐ正則化手法として提案された\cite{JMLR:v15:srivastava14a}．
+訓練時に各層のニューロンを確率$p$でランダムに不活性化することで
+モデルの汎化性能を向上させる．通常，推論時にはDropoutは無効化され，全ニューロンが活性化される．
+
+MC Dropoutは，学習時のみだけでなく，推論時にもDropoutを有効にすることで，モデルの認識的不確実性を推定する手法である．
+通常，推論時の出力は決定論的であるが，Dropoutを有効にすることで，
+異なるサブネットワークが形成され、確率的な出力が得られる．
+同一入力に対してこの確率的な推論を複数回実行して得られる予測結果の分布は、
+Bayesian Neural Networkにおける予測事後分布近似とみなせ，変分推論の一種として解釈できる．
+
+提案法では，このMC Dropoutを学習過程の各段階で適用する．
+具体的には，$\tau$エポックごとに推論フェーズを挿入し，その時点でのモデルが各セグメンテーションをどの程度「難しい」と感じているかを定量化する．
 

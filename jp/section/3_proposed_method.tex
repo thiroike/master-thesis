@@ -1,37 +1,120 @@
+図\ref{method} に提案手法の概要を，アルゴリズム\ref{alg:proposed_method} に詳細なアルゴリズムを示す．
+提案法では，学習中各画像に対して $\tau$ エポックごとに MC Dropout を用いて画像毎に複数枚推論を行い，予測のばらつきから不確実性を定量化する．
+この不確実性情報は，モデルがその画像のセグメンテーションをどの程度「難しい」と感じているかを反映する．
+その後，この不確実性情報を画像単位に集約し，PolyDice Loss の形状を動的に制御することで，難しい画像には急峻な勾配を，簡単な画像には緩やかな勾配を与える．
+更新された $\epsilon$ を次の $\tau$ エポック間の学習に適用することで，学習の進行度に応じて最適化の重み付けを動的に変化させる適応的学習を実現する．
 
-Fig.~\ref{fig:intro:sample}に，提案法の概略図を示す．
-提案法は，何らか何らかを利用することで，何らか何らかが可能である．
+\clearpage
 
-
-%%%%%%%%%%%%%%%%%%%
-% 図表は上下に寄せる．図表の上下の両側に文がくることがないように注意．
-\begin{figure}[b] % 下に寄せる場合
-    \centering
-    \includegraphics[width=0.95\hsize]{figure/sample.pdf}
-    \caption{Sample figure.}
-    \label{fig:intro:sample}
+\begin{figure}
+    \includegraphics[width=\columnwidth]{figure/method.pdf}
+    \caption{Overview of the proposed adaptive learning framework}
+    \label{method}
 \end{figure}
-%%%%%%%%%%%%%%%%%%%
 
-\subsection{モデル構造}
+\clearpage
 
-$D$次元の入力ベクトル$\mathbf{x} \in \mathbb{R}^D$に対し，提案法の構造は以下の式で表される．
+\begin{algorithm}[t]
+    \caption{Uncertainty-based Adaptive PolyDice-1 Loss Learning}
+    \label{alg:proposed_method}
+    \begin{algorithmic}[1]
+        \Require Training dataset $\mathcal{D}$, Max epochs $E$, Model $f_\theta$
+        % ▼▼▼ E_0 の定義を「適応的学習開始エポック」として明確化 ▼▼▼
+        \Require \textbf{Hyperparameters:} Adaptive start epoch $E_0$, Interval $\tau$, MC iterations $N$, Slope $k$, Range $[\epsilon_{\min}, \epsilon_{\max}]$
+        
+        \State Initialize model parameters $\theta$
+        \State Initialize loss parameter $\epsilon_i \leftarrow 0$ for all images $x_i \in \mathcal{D}$
+        
+        \For{$e = 1$ \textbf{to} $E$}
+            \Comment{\textbf{Step 1: Adaptive Control Phase}}
+            % ▼▼▼ 論理的な整合性: E_0 (例:11) になった瞬間に最初の更新を行う ▼▼▼
+            % これにより、e=1~10はSkipされ、e=11の学習「前」に更新される
+            \If{$e \geq E_0$ \textbf{and} $(e - E_0) \pmod \tau = 0$}
+                \State $List_D \leftarrow \emptyset$
+                \For{each image $x_i \in \mathcal{D}$}
+                    \State Perform $N$ stochastic inferences: $\{\hat{y}^{(n)}\}_{n=1}^N \leftarrow \text{MC\_Dropout}(x_i)$
+                    % ... (中略) ...
+                    \State Update $\epsilon_i \leftarrow \dots$
+                \EndFor
+            \Else
+                % ▼▼▼ 明示的に書くことで誤解を防ぐ（省略可） ▼▼▼
+                \State \Comment{Keep $\epsilon_i$ fixed (Initial Training / Interval)}
+            \EndIf
+
+            \State
+            \Comment{\textbf{Step 2: Training Phase}}
+            \For{each batch $(\mathbf{x}, \mathbf{y}) \in \mathcal{D}$}
+                % ... (中略) ...
+                \State Update parameters: $\theta \leftarrow \theta - \eta \nabla_\theta \mathcal{L}$
+            \EndFor
+        \EndFor
+        \State \Return Trained parameters $\theta$
+    \end{algorithmic}
+\end{algorithm}
+
+\clearpage
+
+\subsection{学習プロセスと MC Dropout 推論}
+
+提案法では，学習プロセスを初期学習期間と適応的学習期間の2段階に分割する．
+エポック $1$ から $E_0 - 1$ までの期間は初期学習期間とし，損失形状パラメータ $\epsilon$ を $0$（または所定の固定値）に固定して学習を行う．
+これにより，不確実性推定を行う前に，モデルにセグメンテーションタスクに必要な基礎的な表現力を獲得させる．
+
+適応的学習期間（$e \geq E_0$）においては，周期 $\tau$ ごとに不確実性の再評価と $\epsilon$ の更新を行う．
+すなわち，更新は $e \in \{E_0, E_0+\tau, E_0+2\tau, \ldots\}$ を満たすエポックの学習開始前に実行される．
+更新の際は，その時点のモデルパラメータ $\theta$ を固定し，訓練データの各画像 $x \in \mathcal{X}$ に対して Dropout 率 $p \in (0,1)$ で $N$ 回の確率的推論を行う．
+得られる予測集合を $\{\hat{\mathbf{Y}}^{(n)}\}_{n=1}^{N}$ とする：
 %
-\begin{align}
-    p(\mathbf{x}) = \int p(\mathbf{x} | \boldsymbol{\mu}, u \boldsymbol{\Sigma}) p(u) \mathrm{d}u
-\end{align}
+\begin{equation}
+    \hat{\mathbf{Y}}^{(n)} = f_{\theta}(x; \mathbf{z}^{(n)}), \quad \mathbf{z}^{(n)} \sim \text{Bernoulli}(1-p)
+\end{equation}
 %
-ここで，$\boldsymbol{\mu} \in \mathbb{R}^D$は平均ベクトル，$\boldsymbol{\Sigma} \in \mathbb{R}^{D \times D}$は共分散行列である．
-また，$u \in \mathbb{R}^+$は尺度因子を表す．
+ここで，$\mathbf{z}^{(n)}$ は $n$ 回目の推論における Dropout マスクであり，$\hat{\mathbf{Y}}^{(n)}$ はその予測確率マップである．
+この確率的推論により得られる予測のばらつきから，モデルの認識的不確実性を定量化する．
 
+\subsubsection{ピクセル単位の不確実性指標の計算}
+得られた $N$ 枚の予測画像に対し，ピクセル単位の不確実性指標として相互情報量 $I_{i,j}$ を計算する．
 
+\begin{equation}
+    I_{i, j} = H(\bar{y}_{i, j}) - \frac{1}{N}\sum_{n=1}^{N} H(\hat{y}_{i, j}^{(n)})
+\end{equation}
 
-\subsection{推論方法}
+ここで $H(\cdot)$ はエントロピー関数，$\bar{y}_{i, j}$ は予測の平均を表す．
+この相互情報量はモデルパラメータの不確実性を反映しており，値が高い領域はモデルが十分に学習できていないことを示唆する．
 
-提案法は何らかの方法で推論が可能である．
+\subsection{画像全体の難易度指標の算出}
 
-\subsection{学習アルゴリズム}
+\subsubsection{画像単位への集約}
+医用画像のクラス不均衡性を考慮し，陽性領域に限定した相互情報量の平均を画像全体の難易度スコアとして用いる．
+画像領域全体を $\Omega$，正解マスクにおける陽性領域の画素集合を $\mathcal{P} = \{(i,j) \in \Omega \mid y_{i,j} = 1\}$ とすると，
+画像全体の難易度スコア $D$ は次式で算出される．
 
-提案法の学習アルゴリズムは以下の通りである．
+\begin{equation}
+    D = \frac{1}{|\mathcal{P}|} \sum_{(i,j) \in \mathcal{P}} I_{i,j}
+\end{equation}
 
+ここで，$|\mathcal{P}|$ は陽性領域の総画素数を表す．
+なお，陽性領域が存在しない画像については，$D=0$（または画像全体の平均）とする．
 
+次に，各サンプルの相対的な難易度を決定するため，データセット全体の難易度スコア分布に基づいて正規化を行う．
+算出された全画像のスコア集合における $p$ パーセンタイル値を $D_p$，標準偏差を $\sigma_D$ とすると，正規化されたスコア $D_{\text{norm}}$ は次のように計算される．
+
+\begin{equation}
+    D_{\text{norm}} = \frac{D - D_{p}}{\sigma_D + \delta}
+\end{equation}
+ここで，$\delta$ は数値的安定性のための微小定数である．
+
+\subsection{適応的制御}
+得られた難易度指標 $D_{\text{norm}}$ に基づき，PolyDice-1 Loss の形状パラメータ $\epsilon$ を動的に更新する．
+更新式には以下のシグモイドベースの制御関数を用いる．
+
+\begin{equation}
+    f(x) = \frac{1}{1 + \exp(-kx)}
+\end{equation}
+\begin{equation}
+    \epsilon = \epsilon_{\text{min}} + (\epsilon_{\text{max}} - \epsilon_{\text{min}}) f(D_{\text{norm}})
+\end{equation}
+
+ここで，$k$ は関数の感度を制御するハイパーパラメータであり，$\epsilon_{\text{min}}, \epsilon_{\text{max}}$ は $\epsilon$ の変動範囲である．
+この制御により，モデルが「難しい」と感じる画像には大きな $\epsilon$ が割り当てられ，損失関数の勾配が急峻になる．
+更新された $\epsilon$ は次の $\tau$ エポック間の学習に適用され，これによりモデルは困難な画像の学習を重点的に行うことが可能となる．

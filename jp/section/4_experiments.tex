@@ -1,31 +1,87 @@
-
-\subsection{実験方法}
-
-何とかを目的に，何らか実験を行った．
+提案法の有効性を検証するために，医用画像データセットを用いた実験を行った．
 
 
-\subsection{結果}
+\subsection{実験設定}
+\subsubsection{データセットおよび実装の詳細}
+CVC-ClinicDBデータセット\cite{BERNAL201599}データセットおよびKvasir-SEGデータセット\cite{jha2020kvasir}を用いて実験を行った．
+CVC-ClinicDBデータセットは$612$枚の大腸内視鏡画像（$384 \times 288$ pixel），Kvasir-SEGデータセットは$1000$枚の大腸内視鏡画像で，
+いずれも大腸内視鏡画像とそれに対応するポリープの正解マスクから構成される．
 
-図表を用いて実験結果を示す．
-表の例をTable~\ref{tab:sample}に示す．
+セグメンテーションモデルには表\ref{tab:unet_architecture}に示される構造のU-Net\cite{ronneberger2015u}を採用した．
+学習にはAdam optimizer\cite{kingma2014adam}を使用し，バッチサイズ$32$, 学習率$10 ^ {-3}$に設定した．
+損失関数にはPolyDice-1 Loss（$\epsilon = 0$）を用いた．
+前処理として全画像を$W = 224$ pixel, $H = 224$ pixelにリサイズし，訓練時には
+$50\%$の確率で上下左右反転および明度・コントラストの変更を適用した．
+最大エポック数$E$は$200$に設定した．
 
-%%%%%%%%%%%%%%%%%%%%%%%
-% 表はbooktabs環境で書くことを推奨
-\begin{table}[b]
-\centering
-\caption{Performance evaluation}
-\label{tab:sample}
-\begin{tabular}{lcccc}
-    \toprule
-    Model      & Accuracy & Sensitivity & Specificity & AUC-ROC \\ \midrule
-    Baseline \#1 & 0.578    & XXXX        & XXXX        & XXXX    \\
-    Baseline \#2 & 0.622    & XXXX        & XXXX        & XXXX    \\
-    Ours       & 0.751    & XXXX        & XXXX        & XXXX    \\ \bottomrule
-\end{tabular}
+MC Dropoutによる不確実評価は，$\tau=10$エポックごとに実施した．
+Dropout層はエンコーダの最終ブロックとデコーダの最終ブロックに配置し，
+各評価時には，$p = 0.5$で$N = 10$回の確率的推論を行った．
+またバッチ内の難易度指標の正規化時のパーセンタイルは$p = 25$に設定し，
+適応的学習の開始エポックは$E_{\text{start}} = 0$とし，
+$\epsilon_{\text{min}}=0$, $\epsilon_{\text{max}}=0.5$, $k=2$とした．
+
+
+\subsubsection{比較条件および比較指標}
+適応的学習の有効性を評価するため，複数の条件下で比較実験を行った．
+まず，医用画像セグメンテーションにおける標準的なベースラインとしてDice Lossを検討し，
+併せてクラス不均衡問題に対処する代表的手法であるFocal Loss\cite{lin2017focal}とも比較を行った．
+また易しいサンプルの重みを下げる割合を調整するパラメータは$\gamma=2$と設定した．
+次に，PolyDice-1 Lossにおけるパラメータ $\epsilon$を動的に制御することの有効性を検証するため，
+$\epsilon$ を固定値とした場合との比較を行った．
+これには，Dice Lossを近似した $\epsilon=0$ の設定に加え，予備実験により探索されたデータセットごとの最適な固定値を用いたPolyDice-1 Lossが含まれる．
+これらの比較手法と，不確実性指標に基づいて $\epsilon$ を適応的に更新する提案法の
+セグメンテーション精度を比較することで，提案手法の有効性を検証する．
+
+またセグメンテーションの性能の評価には，Dice係数，IoU，Precision，Recallを用いた．
+
+\clearpage
+
+\begin{table}[t]
+    \centering
+    \caption{Overview of the U-Net Architecture}
+    \label{tab:unet_architecture}
+    \begin{tabular}{lc}
+        \toprule
+        \textbf{Layer} & \textbf{Output Size} \\
+        \midrule
+        % ★★★ 表示するテキストを追加 ★★★
+        \multicolumn{2}{c}{\textit{--- Encoder ---}} \\
+        Input & $224 \times 224 \times 3$ \\
+        inc (DoubleConv) & $224 \times 224 \times 64$\\
+        down1 (MaxPool + DoubleConv) & $112 \times 112 \times 128$ \\
+        down2 (MaxPool + DoubleConv) & $56 \times 56 \times 256$ \\
+        down3 (MaxPool + DoubleConv) & $28 \times 28 \times 512$ \\
+        down4 (MaxPool + DoubleConv) & $14 \times 14 \times 512$ \\
+        \midrule
+        % ★★★ 表示するテキストを追加 ★★★
+        \multicolumn{2}{c}{\textit{--- Decoder ---}} \\
+        up1 (Upsample + DoubleConv) & $28 \times 28 \times 256$ \\
+        up2 (Upsample + DoubleConv) & $56 \times 56 \times 128$ \\
+        up3 (Upsample + DoubleConv) & $112 \times 112 \times 64$ \\
+        up4 (Upsample + DoubleConv) & $224 \times 224 \times 64$ \\
+        \midrule
+        outc (Conv2d) & $224 \times 224 \times 2$ \\
+        \bottomrule
+    \end{tabular}
 \end{table}
-%%%%%%%%%%%%%%%%%%%%%%%
 
+\clearpage
 
-\subsection{考察}
-
-得られた結果について議論する．
+\begin{table}[t]
+    \centering
+    \caption{Performance Comparison with Existing Loss Functions on Kvasir-SEG Dataset}
+    \label{tab:results}
+    \begin{tabular}{ccccc} % lcccc から ccccc に変更（全て中央揃え）
+        \toprule
+        Method & Dice & IoU & Precision & Recall \\ % Dice Coefficient -> Dice に短縮
+        \midrule
+        Dice Loss & 0.7895 & 0.7021 & 0.8281 & 0.8154 \\
+        Focal Loss ($\gamma = 2$) & 0.7192 & 0.6082 & 0.8634 & 0.6769 \\
+        PolyDice-1 ($\epsilon=0$) & 0.8095 & 0.7198 & 0.8461 & 0.8268 \\ % fixed, .0 を削除
+        PolyDice-1 (Opt. $\epsilon$) & 0.8095 & 0.7198 & 0.8461 & 0.8268 \\ % optimized, fixed を短縮
+        \midrule
+        Adaptive PolyDice-1 & \textbf{0.8272} & \textbf{0.7440} & \textbf{0.8707} & \textbf{0.8397} \\
+    \bottomrule
+    \end{tabular}
+\end{table}
