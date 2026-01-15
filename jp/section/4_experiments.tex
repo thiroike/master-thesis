@@ -1,36 +1,86 @@
 \subsection{実験設定}
-\subsubsection{データセットおよび実装の詳細}
+\subsubsection{データセット}
 CVC-ClinicDBデータセット\cite{BERNAL201599}データセットおよびKvasir-SEGデータセット\cite{jha2020kvasir}を用いて実験を行った．
 CVC-ClinicDBデータセットは$612$枚の大腸内視鏡画像（$384 \times 288$ pixel），Kvasir-SEGデータセットは$1000$枚の大腸内視鏡画像で，
 いずれも大腸内視鏡画像とそれに対応するポリープの正解マスクから構成される．
+データは$5$分割交差検証で分割され，CVC-ClinicDBデータセットに関しては同一のビデオシーケンスが異なるfoldに跨がらないよう，GroupKFoldを用いた分割を行った．
 
+\subsubsection{実装の詳細}
 セグメンテーションモデルには表\ref{tab:unet_architecture}に示される構造のU-Net\cite{ronneberger2015u}を採用した．
 学習にはAdam optimizer\cite{kingma2014adam}を使用し，バッチサイズ$32$, 学習率$10 ^ {-3}$に設定した．
-損失関数にはPolyDice-1 Loss（$\epsilon = 0$）を用いた．
 前処理として全画像を$W = 224$ pixel, $H = 224$ pixelにリサイズし，訓練時には
 $50\%$の確率で上下左右反転および明度・コントラストの変更を適用した．
 最大エポック数$E$は$200$に設定した．
 
 MC Dropoutによる不確実評価は，$\tau=10$エポックごとに実施した．
 Dropout層はエンコーダの最終ブロックとデコーダの最終ブロックに配置し，
-各評価時には，$p = 0.5$で$N = 10$回の確率的推論を行った．
-またバッチ内の難易度指標の正規化時のパーセンタイルは$p = 25$に設定し，
-適応的学習の開始エポックは$E_{\text{start}} = 0$とし，
+各評価時には，先行研究\cite{pmlr-v48-gal16}を基に$p = 0.5$で$T = 10$回の確率的推論を行った．
+またデータセット内の難易度指標の正規化時のパーセンタイルは難易度分布の偏りを考慮して$q = 25$に設定し，
+予備実験の結果を基に適応的学習の開始エポックは$E_0 = 10$とし，
 $\epsilon_{\text{min}}=0$, $\epsilon_{\text{max}}=0.5$, $k=2$とした．
 
 
-\subsubsection{比較条件および比較指標}
-適応的学習の有効性を評価するため，複数の条件下で比較実験を行った．
-まず，医用画像セグメンテーションにおける標準的なベースラインとしてDice Lossを検討し，
-併せてクラス不均衡問題に対処する代表的手法であるFocal Loss\cite{lin2017focal}とも比較を行った．
-また易しいサンプルの重みを下げる割合を調整するパラメータは$\gamma=2$と設定した．
-次に，PolyDice-1 Lossにおけるパラメータ $\epsilon$を動的に制御することの有効性を検証するため，
-$\epsilon$ を固定値とした場合との比較を行った．
-これには，Dice Lossを近似した $\epsilon=0$ の設定に加え，予備実験により探索されたデータセットごとの最適な固定値を用いたPolyDice-1 Lossが含まれる．
-これらの比較手法と，不確実性指標に基づいて $\epsilon$ を適応的に更新する提案法の
-セグメンテーション精度を比較することで，提案手法の有効性を検証する．
+\subsubsection{比較条件}
+適応的学習の有効性を評価するため，以下の手法と提案法を比較する：
+
+\begin{itemize}
+    \item Dice Loss\cite{milletari2016v}：医用画像セグメンテーションにおける標準的な損失関数であり，ベースラインとして採用した．
+    \item Focal Loss\cite{lin2017focal}：易しいサンプルの損失を down-weight することで
+    クラス不均衡に対処する手法であり，
+    提案法と「サンプルの難易度に応じた重み付け」という点で動機が共通する．
+    ただし，Focal Loss は予測確信度に基づく静的な重み付けであるのに対し，
+    提案法はモデルの不確実性に基づく動的な重み付けである点が異なる．
+    また易しいサンプルの損失を down-weight する割合は$\gamma = 2$とした．
+    \item PolyDice-1 Loss ($\epsilon = 0$)：PolyDice-1 Loss の標準形式であり，
+    理論上は通常の Dice Lossを近似したものである．
+    提案法および後述する Optimal 設定との比較において，
+    パラメータ $\epsilon$ を操作すること自体の純粋な効果を検証するための基準として採用した．
+    \item PolyDice-1 Loss (optimal)：固定$\epsilon$による性能の理論的上界を評価するため，
+    テストデータに対する Dice 係数を最大化する$\epsilon$値を事後的に探索し，
+    これを理想設定として比較に含めた．具体的には，
+    $\epsilon \in \{-0.3, -0.2, \ldots, 0.5\}$ の範囲で網羅的に評価し，
+    最高精度を達成する値$\epsilon$をデータセットごとに決定した．
+    この設定は実運用では実現不可能であるが，
+    「最適な固定値が事前に既知である」という理想的な条件下での性能を表す．
+\end{itemize}
+
+これらの比較により，(1) 提案法が標準的な損失関数より優れているか，
+(2) 適応的$\epsilon$制御が固定$\epsilon = 0$より有効か，(3) 提案法が Optimal 設定に匹敵あるいは上回る性能を達成できるか，を検証する．
+
+\subsubsection{評価指標}
 
 またセグメンテーションの性能の評価には，Dice係数，IoU，Precision，Recallを用いた．
+
+画像全体における真陽性 (TP)，偽陽性 (FP)，偽陰性 (FN) の画素数はそれぞれ以下のように計算される．
+
+\begin{align}
+    TP &= \sum_{j=1}^{W} \sum_{i=1}^{H} \hat{y}_{i, j} y_{i, j} \\
+    FP &= \sum_{j=1}^{W} \sum_{i=1}^{H} \hat{y}_{i, j} (1 - y_{i, j}) \\
+    FN &= \sum_{j=1}^{W} \sum_{i=1}^{H} (1 - \hat{y}_{i, j}) y_{i, j}
+\end{align}
+
+\begin{itemize}
+    \item Dice係数: 正解領域と予測領域の重複度を直接評価するもので，医用画像のような不均衡な画像でも，微小な対象物の抽出精度を適切に反映できるため，主指標として採用した．
+    \begin{align}
+        \text{Dice} = \frac{2TP}{2TP + FP + FN}
+        % &= \frac{2TP}{2TP + FP + FN}
+    \end{align}
+
+    \item IoU：予測領域と正解領域の共通部分を評価する指標であり，セグメンテーションタスクにおける一般的な評価指標として広く用いられている．
+    \begin{align}
+        \text{IoU} = \frac{TP}{TP + FP + FN}
+    \end{align}
+
+    \item Precision：モデルが抽出した領域の正解率を評価する指標であり，過剰な検出を抑制する性能を定量化するために採用した．
+    \begin{align}
+        \text{Precision} = \frac{TP}{TP + FP}
+    \end{align}
+
+    \item Recall：正解領域をどの程度検出できているかを評価する指標であり，特に病変の見落としを防ぐ性能を検証するために採用した．
+    \begin{align}
+        \text{Recall} = \frac{TP}{TP + FN}
+    \end{align}
+\end{itemize}
 
 \clearpage
 
@@ -67,8 +117,26 @@ $\epsilon$ を固定値とした場合との比較を行った．
 
 \begin{table}[t]
     \centering
+    \caption{Performance Comparison with Existing Loss Functions on CVC-ClinicDB Dataset}
+    \label{tab:benchmark_cvc_clinicdb}
+    \begin{tabular}{ccccc} % lcccc から ccccc に変更（全て中央揃え）
+        \toprule
+        Method & Dice & IoU & Precision & Recall \\ % Dice Coefficient -> Dice に短縮
+        \midrule
+        Dice Loss & 0.5408 & 0.4347 & 0.6359 & 0.5819 \\
+        Focal Loss ($\gamma = 2$) & 0.5007 & 0.4133 & 0.7078 & 0.4707 \\
+        PolyDice-1 ($\epsilon=0$) & 0.5825 & 0.4808 & 0.6817 & 0.6167 \\ % fixed, .0 を削除
+        PolyDice-1 (Opt. $\epsilon$) & 0.6145 & 0.5145 & 0.7090 & 0.6372 \\ % optimized, fixed を短縮
+        \midrule
+        Adaptive PolyDice-1 & \textbf{0.6924} & \textbf{0.5262} & \textbf{0.7827} & \textbf{0.7113} \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[t]
+    \centering
     \caption{Performance Comparison with Existing Loss Functions on Kvasir-SEG Dataset}
-    \label{tab:results}
+    \label{tab:benchmark_kvasir_seg}
     \begin{tabular}{ccccc} % lcccc から ccccc に変更（全て中央揃え）
         \toprule
         Method & Dice & IoU & Precision & Recall \\ % Dice Coefficient -> Dice に短縮
@@ -82,3 +150,88 @@ $\epsilon$ を固定値とした場合との比較を行った．
     \bottomrule
     \end{tabular}
 \end{table}
+
+\begin{table}[t]
+    \centering
+    \caption{Performance evaluation of PolyDice-1 Loss with fixed $\epsilon$ on CVC-ClinicDB Dataset}
+    % \caption{Performance Comparison with Existing Loss Functions on Kvasir-SEG Dataset}
+    \label{tab:polydice_fixed_epsilon_cvc}
+    \begin{tabular}{ccccc} % lcccc から ccccc に変更（全て中央揃え）
+        \toprule
+        Coefficient & Dice & IoU & Precision & Recall \\ % Dice Coefficient -> Dice に短縮
+        \midrule
+        -0.3 & 0.5713 & 0.4705 & 0.6641 & 0.6190 \\
+        -0.2 & 0.6102 & 0.5089 & 0.6991 & 0.6515 \\
+        -0.1 & 0.6007 & 0.5010 & 0.6972 & 0.6302 \\ % fixed, .0 を削除
+        0.0 & 0.5825 & 0.4808 & 0.6817 & 0.6167 \\ % optimized, fixed を短縮
+        0.1 & 0.5823 & 0.4876 & 0.7056 & 0.5893 \\
+        0.2 & 0.6145 & 0.5145 & 0.7090 & 0.6372 \\
+        0.3 & 0.5933 & 0.4947 & 0.6990 & 0.6035 \\
+        0.4 & 0.6047 & 0.5052 & 0.7002 & 0.6198 \\
+        0.5 & 0.5757 & 0.4748 & 0.7062 & 0.5958 \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[t]
+    \centering
+    \caption{Performance evaluation of PolyDice-1 Loss with fixed $\epsilon$ on Kvasir-SEG Dataset}
+    % \caption{Performance Comparison with Existing Loss Functions on Kvasir-SEG Dataset}
+    \label{tab:polydice_fixed_epsilon_kvasir-seg}
+    \begin{tabular}{ccccc} % lcccc から ccccc に変更（全て中央揃え）
+        \toprule
+        Coefficient & Dice & IoU & Precision & Recall \\ % Dice Coefficient -> Dice に短縮
+        \midrule
+        -0.3 & 0.8036 & 0.7174 & 0.8435 & 0.8219 \\
+        -0.2 & 0.7284 & 0.6266 & 0.7934 & 0.7558 \\
+        -0.1 & 0.7357 & 0.6351 & 0.7918 & 0.7658 \\ % fixed, .0 を削除
+        0.0 & 0.8095 & 0.7198 & 0.8461 & 0.8268 \\ % optimized, fixed を短縮
+        0.1 & 0.7971 & 0.7111 & 0.8375 & 0.8174 \\
+        0.2 & 0.7964 & 0.7077 & 0.8268 & 0.8231 \\
+        0.3 & 0.7966 & 0.7083 & 0.8301 & 0.8243 \\
+        0.4 & 0.8024 & 0.7157 & 0.8305 & 0.8346 \\
+        0.5 & 0.7356 & 0.6358 & 0.7910 & 0.7635 \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+\clearpage
+
+\subsection{結果と議論}
+
+\subsubsection{比較手法との性能比較：}
+全データセットでの比較表
+
+\subsubsection{難易度別の性能分析}
+群ごとの性能比較，εの推移や分布の推移
+
+\subsubsection{不確実性指標の妥当性検証}
+予測平均と相互情報量の推移を示す
+
+\subsubsection{ハイパーパラメータの影響}
+\begin{enumerate}
+    \item ε範囲の影響
+    \begin{enumerate}
+        \item $\epsilon \in [0, 0.3]$ (控えめ)
+        \item $\epsilon \in [0, 0.5]$ (標準)
+        \item $\epsilon \in [-0.3, 0.5]$ (双方向)
+    \end{enumerate}
+
+    \item 適応速度$k$の影響
+    \begin{enumerate}
+        \item $k=1$
+        \item $k=2$
+        \item $k=3$
+    \end{enumerate}
+
+    \item 適応開始タイミング$E_0$の影響
+    \begin{enumerate}
+        \item $E_0=10$
+        \item $E_0=60$
+        \item $E_0=110$
+        \item $E_0=160$
+    \end{enumerate}
+\end{enumerate}
+
+\subsubsection{定性的評価}
+失敗例の分析，提案法でも失敗する症例の特徴分析，今後の改善方向を示唆

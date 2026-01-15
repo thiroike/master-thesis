@@ -19,14 +19,14 @@ $\left(i \in \{1, ..., H\}, j \in \{1, ..., W\}\right)$．
 として平坦化すると，Dice Lossは以下のように分解できる．
 
 \begin{equation}
-    \mathcal{L}_{\text{Dice}} = 1 - s \cos  \theta
+    \mathcal{L}_{\text{Dice}} = 1 - s \cos \theta
 \end{equation}
 ここで，$s = \frac{2 \langle \hat{\mathbf{y}}, {\mathbf{y}} \rangle}{\Vert \hat{\mathbf{y}} \Vert ^ 2 + \Vert {\mathbf{y}} \Vert ^ 2}$はスケール成分，
 $\theta = \arccos{\frac{\langle \hat{\mathbf{y}}, {\mathbf{y}}\rangle}{\Vert \hat{\mathbf{y}} \Vert \Vert {\mathbf{y}}\Vert}}$は2つの
 ベクトル間の角度を表す．この分解により，Dice Lossはスケール成分$s$と$\cos \theta$の積として理解できる．
 
 方向成分$\cos \theta$に対してTaylor展開を適用することで，PolyDice Lossの多項式表現を導出する．
-つまり学習が進むにつれて予測$\hat{\mathbf{y}}$は正解$\mathbf{y}$に近づくため，両ベクトルのなす角$\theta$は$0$に近づく．
+学習が進むにつれて予測$\hat{\mathbf{y}}$は正解$\mathbf{y}$に近づくため，両ベクトルのなす角$\theta$は$0$に近づく．
 この性質を利用し，$\cos{\theta}$を$\theta = 0$まわりでテイラー展開すると以下のように近似できる．
 \begin{equation}
     \cos{\theta} = 1 - \frac{\theta ^ 2}{2!} + \frac{\theta ^ 4}{4!} - \cdots
@@ -51,7 +51,7 @@ PolyLoss\cite{leng2022polyloss}は分類タスクにおいてCross-Entropy Loss�
 図\ref{polydice}に，$\epsilon$に応じたPolyDice-1 Lossの形状変化を示す．
 $\epsilon > 0$では予測誤差に対するペナルティが強化され，$\epsilon < 0$では緩和される．
 この柔軟な形状制御が可能な特性は，本研究の適応的学習フレームワークにおいて重要な役割を果たす．
-後述する手法では，この$\epsilon$を動的に調整することで，個々の画像の難易度に応じた勾配制御を実現し，学習戦略をサンプル単位で最適化することを可能にしている．
+後述する提案手法では，この$\epsilon$を動的に調整することで，個々の画像の難易度に応じた勾配制御を実現し，学習戦略をサンプル単位で最適化することを可能にしている．
 
 \clearpage
 
@@ -67,50 +67,49 @@ $\epsilon > 0$では予測誤差に対するペナルティが強化され，$\e
 
 \subsubsection{認識的不確実性と偶然的不確実性}
 
-不確実性は，その要因の違いから偶然的不確実性と認識的不確実性に大別される\cite{smith2018understanding}．
+深層学習モデルの予測に伴う不確実性は，その発生源に基づいて偶然的不確実性と認識的不確実性に大別される\cite{smith2018understanding}．
 
-\begin{itemize}
-    \item \textbf{偶然的不確実性（Aleatoric Uncertainty）} \\
-    撮像装置に起因するノイズや低解像度，あるいは組織境界の物理的な曖昧さなど，データそのものに内在する情報不足に起因する．
-    この不確実性はデータの本質的な統計的性質であるため，同一ドメインの訓練データを追加しても解消されない特性を持つ．
+偶然的不確実性（Aleatoric Uncertainty）は，撮像装置に起因するノイズや低解像度，
+あるいは組織境界の物理的な曖昧さなど，データそのものに内在する情報不足に起因する．
+この不確実性はデータの本質的な統計的性質であるため，同一ドメインの訓練データを追加しても解消されない特性を持つ．
 
-    \item \textbf{認識的不確実性（Epistemic Uncertainty）} \\
-    モデルが未学習のパターンや，訓練データの不足による知識の欠如に起因する．
-    これは適切な学習データを追加し、モデルが対象の分布をより詳細に記述することで低減が可能である．
-\end{itemize}
+認識的不確実性（Epistemic Uncertainty）は，モデルが未学習のパターンや，
+訓練データの不足による知識の欠如に起因する．
+これは適切な学習データを追加し、モデルが対象の分布をより詳細に記述することで低減が可能である．
+認識的不確実性が高い画像は，モデルが安定した特徴表現を獲得できておらず，予測が不安定な状態にあることを示す．
+本研究では，この認識的不確実性を画像のセグメンテーション難易度を反映する指標として活用する．
 
-モデルの予測に付随する不確実性を評価し，その依拠する要因を分離する指標として，相互情報量が広く用いられている．
-全不確実性を示す予測エントロピーから，偶然的不確実性を示す期待エントロピーを減ずることで，以下の通り認識的不確実性を定量化できる．
+% モデルの予測に付随する不確実性を評価し，その依拠する要因を分離する指標として，相互情報量が広く用いられている．
+% $T$ 回の推論結果を平均化した後の予測分布に対する不確実性であり，データとモデルの両方に由来する不確実性を示す予測エントロピーから，
+% 個々の推論における不確実性の平均であり，
+% データ固有のノイズや曖昧さに由来する偶然的不確実性を示す期待エントロピーを減ずることで，
+% 以下の通り認識的不確実性を定量化できる．
 
-\begin{equation}
-    I(y_{i, j}, \boldsymbol{\omega} \mid \mathbf{X}) = \underbrace{H \left[ \mathbb{E}_{\boldsymbol{\omega} \sim p(\boldsymbol{\omega} \mid \mathcal{D})} [p(y_{i, j} \mid \mathbf{X}, \boldsymbol{\omega})] \right]}_{\text{Predictive Entropy}} - \underbrace{\mathbb{E}_{\boldsymbol{\omega} \sim p(\boldsymbol{\omega} \mid \mathcal{D})} \left[ H [p(y_{i, j} \mid \mathbf{X}, \boldsymbol{\omega})] \right]}_{\text{Expected Entropy}}
-\end{equation}
+% \begin{equation}
+%     I_{i,j} = \underbrace{H\left( \frac{1}{T} \sum_{t=1}^{T} \hat{y}_{i,j}^{(t)} \right)}_{\text{Entropy of Mean}} - \underbrace{\frac{1}{T} \sum_{t=1}^{T} H\left( \hat{y}_{i,j}^{(t)} \right)}_{\text{Mean of Entropy}}
+% \end{equation}
 
-ここで，各記号の定義は以下の通りである．
-\begin{itemize}
-    \item $\mathbf{X}$: 入力画像
-    \item $y_{i,j}$: ピクセル位置 $(i, j)$ における予測クラスラベル
-    \item $\boldsymbol{\omega}$: モデルのパラメータ
-    \item $p(\boldsymbol{\omega} \mid \mathcal{D})$: 訓練データ $\mathcal{D}$ に基づくパラメータの事後分布
-    \item $H[\cdot]$: シャノン・エントロピー
-    \item $\mathbb{E}_{\boldsymbol{\omega} \sim p(\boldsymbol{\omega} \mid \mathcal{D})}[\cdot]$: パラメータ分布に関する期待値
-\end{itemize}
+% ここで，$H(p)$ は2値分類におけるバイナリ・エントロピー関数であり，次式で定義される．
+
+% \begin{equation}
+%     H(p) = -p \log p - (1-p) \log (1-p)
+% \end{equation}
 
 \subsubsection{MC Dropout の原理と応用}
 
-Dropoutは元々，ニューラルネットワークの過学習を防ぐ正則化手法として提案された\cite{JMLR:v15:srivastava14a}．
-訓練時に各層のニューロンを確率$p$でランダムに不活性化することで
-モデルの汎化性能を向上させる．通常，推論時にはDropoutは無効化され，全ニューロンが活性化される．
+Dropoutは，ニューラルネットワークの過学習を防ぐ正則化手法として提案された\cite{JMLR:v15:srivastava14a}．
+訓練時に各層のニューロンを確率$p$でランダムに不活性化することで，
+モデルの汎化性能を向上させる．通常，推論時にはDropoutは無効化され，全ニューロンが活性化された状態で決定論的な予測が行われる．
 
-MC Dropoutは，学習時のみだけでなく，推論時にもDropoutを有効にすることで，モデルの認識的不確実性を推定する手法である．
-通常，推論時の出力は決定論的であるが，Dropoutを有効にすることで，
-異なるサブネットワークが形成され、確率的な出力が得られる．
-具体的には，各ニューロンの脱落を決定するDropoutマスクは，重みそのものではなく，重みに乗算されるベルヌーイ分布に従う確率変数として表現できる．
-このような確率的マスクを導入した学習目的関数を最小化することは，
-深層ガウス過程に対する変分推論の枠組みにおいて，真の事後分布を特定の変分分布で近似し，
-その変分下界を最適化することに対応すると解釈できる\cite{pmlr-v48-gal16}．
-したがって，同一入力に対して確率的な推論を複数回実行し，その結果を平均化する操作は，ベイズ推論における予測分布の周辺化をモンテカルロ法で近似していると解釈できる．
+MC Dropout\cite{pmlr-v48-gal16}は，学習時のみだけでなく，推論時にもDropoutを有効にすることで，モデルの認識的不確実性を推定する手法である．
+Dropoutを有効にするした状態で推論を行うと，各推論において異なるニューロンが不活性化されるため，
+実質的に異なる部分ネットワークによる予測が得られる．
+同一入力に対してこの確率的推論を複数回実行することで，予測の分布を取得できる．
 
-提案法では，MC Dropoutを用いてモデルがその画像のセグメンテーションにおいてどの程度の確信を持てないかを定量化し，
-各画像の学習難易度として解釈することで，後述する損失関数の適応的制御に利用する．
+Gal and Ghahramani\cite{pmlr-v48-gal16}は，Dropout を適用したニューラルネットワークの学習が，
+ベイズ推論における近似と数学的に等価であることを示した．この理論的枠組みにより，MC Dropout で得られる
+予測分布は，モデルパラメータの事後分布に基づく予測不確実性，すなわち認識的不確実性の近似として解釈できる．
+
+提案法では，MC Dropoutによる推定される認識的不確実性を，
+画像のセグメンテーション難易度を反映する指標として活用し，損失関数の適応的制御に利用する．
 
