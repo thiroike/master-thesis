@@ -49,38 +49,40 @@ $\epsilon_{\text{min}}=0$, $\epsilon_{\text{max}}=0.5$, $k=2$とした．
 
 \subsubsection{評価指標}
 
-またセグメンテーションの性能の評価には，Dice係数，IoU，Precision，Recallを用いた．
-
-画像全体における真陽性 (TP)，偽陽性 (FP)，偽陰性 (FN) の画素数はそれぞれ以下のように計算される．
+またセグメンテーションの性能の評価には，領域の重なりを測るDice係数およびIoUおよび検出精度を測るPrecisionおよびRecallを用いた．
+モデルの予測マップ $\hat{Y}_n$に対し，閾値 $\theta_\text{th} = 0.5$ で二値化した予測マスク $\tilde{Y}_n = \{\tilde{y}_{n,i,j}\}$ とする．
+画像$n$に対する真陽性 (TP)，偽陽性 (FP)，偽陰性 (FN) の画素数はそれぞれ以下で定義される．
 
 \begin{align}
-    TP &= \sum_{j=1}^{W} \sum_{i=1}^{H} \hat{y}_{i, j} y_{i, j} \\
-    FP &= \sum_{j=1}^{W} \sum_{i=1}^{H} \hat{y}_{i, j} (1 - y_{i, j}) \\
-    FN &= \sum_{j=1}^{W} \sum_{i=1}^{H} (1 - \hat{y}_{i, j}) y_{i, j}
+    TP_n &= \sum_{j=1}^{W} \sum_{i=1}^{H} \tilde{y}_{i, j} y_{i, j} \\
+    FP_n &= \sum_{j=1}^{W} \sum_{i=1}^{H} \tilde{y}_{i, j} (1 - y_{i, j}) \\
+    FN_n &= \sum_{j=1}^{W} \sum_{i=1}^{H} (1 - \tilde{y}_{i, j}) y_{i, j}
 \end{align}
 
 \begin{itemize}
     \item Dice係数: 正解領域と予測領域の重複度を直接評価するもので，医用画像のような不均衡な画像でも，微小な対象物の抽出精度を適切に反映できるため，主指標として採用した．
     \begin{align}
-        \text{Dice} = \frac{2TP}{2TP + FP + FN}
+        \text{Dice}_n = \frac{2TP_n}{2TP_n + FP_n + FN_n}
         % &= \frac{2TP}{2TP + FP + FN}
     \end{align}
 
     \item IoU：予測領域と正解領域の共通部分を評価する指標であり，セグメンテーションタスクにおける一般的な評価指標として広く用いられている．
     \begin{align}
-        \text{IoU} = \frac{TP}{TP + FP + FN}
+        \text{IoU}_n = \frac{TP_n}{TP_n + FP_n + FN_n}
     \end{align}
 
     \item Precision：モデルが抽出した領域の正解率を評価する指標であり，過剰な検出を抑制する性能を定量化するために採用した．
     \begin{align}
-        \text{Precision} = \frac{TP}{TP + FP}
+        \text{Precision}_n = \frac{TP_n}{TP_n + FP_n}
     \end{align}
 
     \item Recall：正解領域をどの程度検出できているかを評価する指標であり，特に病変の見落としを防ぐ性能を検証するために採用した．
     \begin{align}
-        \text{Recall} = \frac{TP}{TP + FN}
+        \text{Recall}_n = \frac{TP_n}{TP_n + FN_n}
     \end{align}
 \end{itemize}
+
+各指標はテストデータ全体での平均値を報告する．
 
 \clearpage
 
@@ -232,6 +234,98 @@ $\epsilon_{\text{min}}=0$, $\epsilon_{\text{max}}=0.5$, $k=2$とした．
         \item $E_0=160$
     \end{enumerate}
 \end{enumerate}
+
+% \begin{table}[t]
+%     \centering
+%     \caption{Impact of Different $\epsilon$ Ranges on Segmentation Performance CVC-ClinicDB Dataset}
+%     \label{tab:ablation_epsilon_cvc}
+%     \begin{tabular}{ccccc}
+%         \toprule
+%         $\epsilon_{\text{min}}$ & $\epsilon_{\text{max}}$ & Dice & IoU & Precision & Recall \\
+%         \midrule
+%         $0$ & $0.3$ & 0.6935 & 0.5962 & 0.7853 & 0.7175 \\
+%         $0$ & $0.5$ & 0.6924 & 0.5913 & 0.7827 & 0.7113 \\
+%         $-0.3$ & $0.5$ & 0.8189 & 0.7313 & 0.8537 & 0.8454 \\
+%         \bottomrule
+%     \end{tabular}
+% \end{table}
+
+\begin{table}[t]
+    \centering
+    \caption{Impact of Different $\epsilon$ Ranges on Segmentation Performance Kvasir-SEG Dataset}
+    \label{tab:ablation_epsilon_kvasir-seg}
+    \begin{tabular}{cccccc}
+        \toprule
+        $\epsilon_{\text{min}}$ & $\epsilon_{\text{max}}$ & Dice & IoU & Precision & Recall \\
+        \midrule
+        $0$ & $0.3$ & 0.8239 & 0.7391 & 0.8608 & 0.8410 \\
+        $0$ & $0.5$ & 0.8272 & 0.7440 & 0.8707 & 0.8397 \\
+        $-0.3$ & $0.5$ & 0.8189 & 0.7313 & 0.8537 & 0.8454 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+% \begin{table}[t]
+%     \centering
+%     \caption{Performance Sensitivity to Slope Parameter $k$ CVC-ClinicDB Dataset}
+%     \label{tab:ablation_k_cvc}
+%     \begin{tabular}{ccccc}
+%         \toprule
+%         Slope ($k$) & Dice & IoU & Precision & Recall \\
+%         \midrule
+%         $1$ & 0.6935 & 0.5962 & 0.7853 & 0.7175 \\
+%         $2$ & 0.6924 & 0.5913 & 0.7827 & 0.7113 \\
+%         $3$ & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+%         \bottomrule
+%     \end{tabular}
+% \end{table}
+
+\begin{table}[t]
+    \centering
+    \caption{Performance Sensitivity to Slope Parameter $k$ Kvasir-SEG Dataset}
+    \label{tab:ablation_k_kvasir-seg}
+    \begin{tabular}{ccccc}
+        \toprule
+        $k$ & Dice & IoU & Precision & Recall \\
+        \midrule
+        $1$ & 0.8235 & 0.7404 & 0.8589 & 0.8440 \\
+        $2$ & 0.8272 & 0.7440 & 0.8707 & 0.8397 \\
+        $3$ & 0.8229 & 0.7375 & 0.8663 & 0.8370 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+% \begin{table}[t]
+%     \centering
+%     \caption{Effect of Adaptation Start Epoch $E_0$ CVC-ClinicDB Dataset}
+%     \label{tab:ablation_e0_cvc}
+%     \begin{tabular}{ccccc}
+%         \toprule
+%         $E_0$ & Dice & IoU & Precision & Recall \\
+%         \midrule
+%         $10$ & 0.6924 & 0.5962 & 0.7827 & 0.7113 \\
+%         $60$ & 0.8097 & 0.7226 & 0.8571 & 0.8255 \\
+%         $110$ & 0.6325 & 0.5262 & 0.7328 & 0.6522 \\
+%         $160$ & 0.5940 & 0.4920 & 0.7138 & 0.6123 \\
+%         \bottomrule
+%     \end{tabular}
+% \end{table}
+
+\begin{table}[t]
+    \centering
+    \caption{Effect of Adaptation Start Epoch $E_0$ Kvasir-SEG Dataset}
+    \label{tab:ablation_e0_kvasir-seg}
+    \begin{tabular}{ccccc}
+        \toprule
+        $E_0$ & Dice & IoU & Precision & Recall \\
+        \midrule
+        $10$ & 0.8272 & 0.7440 & 0.8707 & 0.8397 \\
+        $60$ & 0.8097 & 0.7226 & 0.8571 & 0.8255 \\
+        $110$ & 0.8136 & 0.7250 & 0.8574 & 0.8309 \\
+        $160$ & 0.8005 & 0.7125 & 0.8480 & 0.815 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
 
 \subsubsection{定性的評価}
 失敗例の分析，提案法でも失敗する症例の特徴分析，今後の改善方向を示唆
