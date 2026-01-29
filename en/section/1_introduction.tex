@@ -1,16 +1,47 @@
-This is a LaTeX format template intended for use in Master's theses at the Graduate School of Advanced Science and Engineering, Information Sciences Program, Hiroshima University. The chapter and section structure is tentative; please modify it according to your content. Do not modify font sizes or line spacing as these changes may disrupt the layout.
+Medical image segmentation is an indispensable technology in diagnostic support and treatment planning,
+requiring the extraction of regions corresponding to normal or abnormal tissues.
+Clinical applications are advancing rapidly, particularly in the detection of colorectal polyps~\cite{ji2022video}
+and organs at risk (OARs) in head and neck cancer radiotherapy~\cite{maleki2020machine}.
 
-When citing previous literature in the text, use the \verb|\cite| command. Use the citation key listed in the reference list, writing it as:
+However, medical image segmentation presents inherent challenges.
+A particularly significant issue is class imbalance.
+In medical images, background regions typically occupy the majority of the image,
+while target lesions often occupy only a relatively small area. Under these conditions,
+the Cross-Entropy Loss~\cite{long2015fully}, which is widely used in conventional classification tasks,
+becomes biased toward learning the background regions, making accurate segmentation of clinically significant small lesions and ambiguous boundaries difficult.
 
-\noindent ``\verb|...a method has been proposed based on~\cite{Furui2019-bz}.|'' (The \verb|~| prevents the citation symbol from being separated to the next line).
+To address this challenge, the Dice Loss~\cite{milletari2016v}, which is robust to class imbalance,
+and its many extensions have been proposed, with high performance reported in CT images~\cite{zhu2019anatomynet, 9109297}
+and MRI images~\cite{KATO2024107695}. However, these loss functions have the constraint of possessing a fixed shape across all images.
+Medical images exhibit significant diversity due to imaging conditions and individual differences, as well as substantial variations in lesion size and shape,
+differences in tissue contrast, and boundary ambiguity; consequently, the difficulty of segmentation varies greatly from image to image.
+Using a fixed loss function applies the same training signal to both easy and difficult images, which may result in insufficient learning for difficult cases.
+Therefore, an approach that adaptively adjusts the loss function according to the difficulty of each image is promising.
+Realizing such adaptive learning requires two elements: first, a method to flexibly control the shape of the loss function to strengthen the training signal for high-difficulty images;
+and second, a difficulty metric to evaluate how challenging each image is for the model during training.
 
-By labeling figures and equations using the \verb|\label{label_name}| command, you can easily retrieve figure or equation numbers in the text by writing \verb|\ref{label}|. For example, a figure labeled with \verb|\label{fig:method}| can be cited as
+In this study, we propose an adaptive learning framework that integrates these two elements.
+For controlling the shape of the loss function, we employ PolyDice Loss~\cite{polydice},
+which is obtained by the polynomial expansion of Dice Loss. PolyDice Loss is suitable for adaptive learning
+because it allows for continuous control of the loss function's shape using optimal parameters for each image.
+To quantify difficulty, we use uncertainty estimation via Monte Carlo Dropout~\cite{pmlr-v48-gal16} (hereinafter referred to as MC Dropout).
+MC Dropout enables the efficient estimation of the model's epistemic uncertainty by enabling dropout during inference.
+This uncertainty reflects the degree of the model's lack of confidence in segmenting the image and can be utilized as an indicator of segmentation difficulty.
+The proposed method dynamically controls the shape parameter of the PolyDice Loss based on the estimated uncertainty metric,
+applying steep gradients to difficult images and gentle gradients to easy images, thereby aiming to realize efficient and robust learning.
 
-\noindent ``\verb|The proposed method is shown in Fig.~\ref{fig:method}|'', and an equation labeled with \verb|\label{eq:model}| can be cited as 
+The main contributions of this study are as follows:
+\begin{enumerate}
+    \item \textbf{Introduction of a dynamic quantification method for image difficulty based on uncertainty:}
+    We propose a method to estimate epistemic uncertainty during inference using MC Dropout and quantify it as image-level ``learning difficulty.'' 
+    This enables the objective evaluation of the diverse segmentation difficulties of medical images based on the model's own confidence.
 
-\noindent ``\verb|As shown in equation (\ref{eq:model})...|''. Avoid manually typing figure or equation numbers.
+    \item \textbf{Construction of an adaptive control framework for the loss function based on difficulty:}
+    We constructed a learning framework that adaptively controls the shape parameter of the PolyDice Loss based on the quantified difficulty metric.
+    The proposed method automatically adjusts the gradients of the loss function according to the difficulty that changes with the progress of learning,
+    thereby simultaneously achieving a focus on learning for difficult cases and the suppression of gradient dominance by easy cases.
 
-Various other LaTeX command examples are provided in the following chapters for reference. Note that figures (illustrations and graphs) should be prepared as PDF files. The method for inserting figure files is described in Chapter 3.
-
-In the following, Chapter 2 describes a methodology and various closely related existing methods. Chapter 3 explains the proposed XX, and Chapter 4 describes the experimental method, results, and discussion. Finally, Chapter 5 presents the conclusions and future work.
-
+    \item \textbf{Demonstration of effectiveness and versatility using multiple datasets:}
+    We verified the effectiveness of the proposed method through comparative experiments using medical image datasets.
+    The experimental results demonstrated that the proposed method improves segmentation accuracy compared to conventional loss functions with fixed shapes.
+\end{enumerate}

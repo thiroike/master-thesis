@@ -1,5 +1,9 @@
-In this thesis, we presented XX based on the YY method. In particular, we demonstrated that ZZ is achievable through AA.
-
-In our experiments, we conducted BB to evaluate CC. The results indicated DD, suggesting the potential for EE.
-
-Future work should focus on improving FF.
+In this paper, we proposed an adaptive learning method for medical image segmentation.
+The proposed method quantifies the model's epistemic uncertainty using MC Dropout and utilizes this as a metric for segmentation difficulty.
+By dynamically controlling the shape parameter of the PolyDice-1 Loss based on the obtained difficulty metric,
+we realized an adaptive learning strategy that assigns steeper gradients to difficult images and gentler gradients to easy images.
+In evaluation experiments using the CVC-ClinicDB and Kvasir-SEG datasets,the proposed method achieved performance surpassing
+not only existing methods such as Dice Loss and Focal Loss but also the ideal fixed parameter setting.In particular,
+for cases that were difficult to segment with conventional methods,the Dice coefficient improved by $0.36$ on the CVC-ClinicDB dataset,
+demonstrating the effectiveness of the proposed adaptive learning strategy for detecting challenging lesions.
+Future work includes the automatic optimization of hyperparameters and the extension of the method to 3D medical images such as CT and MRI.

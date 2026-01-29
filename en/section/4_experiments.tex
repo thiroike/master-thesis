@@ -1,28 +1,105 @@
-\subsection{Experimental Method}
+\subsection{Experimental Settings}
 
-We conducted experiments to evaluate XX.
+\subsubsection{Datasets}
+We conducted experiments using the CVC-ClinicDB dataset \cite{BERNAL201599} and the Kvasir-SEG dataset \cite{jha2020kvasir}.
+The CVC-ClinicDB dataset consists of $612$ colonoscopy images ($384 \times 288$ pixels), and the Kvasir-SEG dataset consists of $1000$ colonoscopy images.
+Both datasets are comprised of colonoscopy images and their corresponding ground truth polyp masks.The data was split using 5-fold cross-validation.
+For the CVC-ClinicDB dataset, we used GroupKFold splitting to ensure that frames from the same video sequence did not span across different folds.
 
-\subsection{Results}
+\subsubsection{Implementation Details}
+We adopted U-Net \cite{ronneberger2015u} with the architecture shown in Table \ref{tab:unet_architecture} as the segmentation model.
+We used the Adam optimizer \cite{kingma2014adam} for training, with the batch size set to $32$ and the learning rate set to $10^{-3}$.As preprocessing,
+all images were resized to $W = 224$ pixels and $H = 224$ pixels. During training,we applied horizontal/vertical flips and brightness/contrast adjustments with a probability of $50\%$.
+The maximum number of epochs $E$ was set to $200$.Uncertainty estimation via MC Dropout was performed every $\tau=10$ epochs.
+Dropout layers were placed in the final block of the encoder and the final block of the decoder.During each evaluation, based on previous work \cite{pmlr-v48-gal16}, 
+we performed $T = 10$ stochastic inferences with a dropout rate of $p = 0.5$.
+Additionally, the percentile for normalizing the difficulty metric within the dataset was set to $q = 25$ considering the skewness of the difficulty distribution.
+Based on the results of preliminary experiments, the start epoch for adaptive learning was set to $E_0 = 10$,with $\epsilon_{\text{min}}=0$, $\epsilon_{\text{max}}=0.5$, 
+and $k=2$.\subsubsection{Comparison Conditions}To evaluate the effectiveness of adaptive learning, we compare the proposed method with the following methods:
 
-The experimental results are presented using figures and tables.
-Table~\ref{tab:sample} shows an example table.
+\begin{itemize}
+    \item Dice Loss \cite{milletari2016v}: A standard loss function in medical image segmentation, adopted as the baseline.
+    \item Focal Loss \cite{lin2017focal}: A method that addresses class imbalance by down-weighting the loss of easy samples.
+    It shares a common motivation with the proposed method in terms of "weighting according to sample difficulty."
+    However, the difference lies in that Focal Loss uses static weighting based on prediction confidence,
+    whereas the proposed method uses dynamic weighting based on model uncertainty.
+    The rate for down-weighting easy samples was set to $\gamma = 2$.
+    \item PolyDice-1 Loss ($\epsilon = 0$): The standard form of PolyDice-1 Loss,which theoretically approximates the standard Dice Loss.
+    It was adopted as a reference to verify the pure effect of manipulating the parameter $\epsilon$ in comparison with the proposed method and the Optimal setting described below.
+    \item PolyDice-1 Loss (optimal): To evaluate the theoretical upper bound of performance with a fixed $\epsilon$,
+    we retrospectively searched for the $\epsilon$ value that maximizes the Dice coefficient on the test data
+    and included this as an ideal setting for comparison. Specifically,
+    we exhaustively evaluated $\epsilon$ in the range of $\{-0.3, -0.2, \ldots, 0.5\}$
+    and determined the value $\epsilon$ that achieved the highest accuracy for each dataset.
+    Although this setting is impossible to realize in practical operation,
+    it represents the performance under the ideal condition where the "optimal fixed value is known beforehand."
+\end{itemize}
 
-%%%%%%%%%%%%%%%%%%%%%%%
-% Tables should be created using the booktabs environment
-\begin{table}[b]
-\centering
-\caption{Performance evaluation}
-\label{tab:sample}
-\begin{tabular}{lcccc}
-    \toprule
-    Model      & Accuracy & Sensitivity & Specificity & AUC-ROC \\ \midrule
-    Baseline \#1 & 0.578    & XXXX        & XXXX        & XXXX    \\
-    Baseline \#2 & 0.622    & XXXX        & XXXX        & XXXX    \\
-    Ours       & 0.751    & XXXX        & XXXX        & XXXX    \\ \bottomrule
-\end{tabular}
+Through these comparisons, we verify: (1) whether the proposed method is superior to standard loss functions,
+(2) whether adaptive $\epsilon$ control is more effective than fixed $\epsilon = 0$, and (3) whether the proposed method can achieve performance comparable to or exceeding the Optimal setting.
+
+\subsubsection{Evaluation Metrics}
+To evaluate segmentation performance, we used the Dice coefficient and IoU to measure region overlap, 
+and Precision and Recall to measure detection accuracy.Let $\tilde{Y}_n = \{\tilde{y}_{n,i,j}\}$ be the predicted mask obtained by binarizing the model's prediction map
+$\hat{Y}_n$ for image $n$ with a threshold $\theta_\text{th} = 0.5$.The numbers of True Positive (TP), False Positive (FP), 
+and False Negative (FN) pixels for image $n$ are defined as follows:
+\begin{align}
+    TP_n &= \sum_{j=1}^{W} \sum_{i=1}^{H} \tilde{y}{i, j} y{i, j} \\
+    FP_n &= \sum_{j=1}^{W} \sum_{i=1}^{H} \tilde{y}{i, j} (1 - y{i, j}) \\
+    FN_n &= \sum_{j=1}^{W} \sum_{i=1}^{H} (1 - \tilde{y}_{i, j}) y_{i, j}
+\end{align}
+
+\begin{itemize}
+    \item Dice Coefficient: Evaluates the overlap between the ground truth and predicted regions directly.
+    It was adopted as the main metric because it can appropriately reflect the extraction accuracy of minute objects even in unbalanced images like medical images.
+    \begin{align}
+        \text{Dice}_n = \frac{2TP_n}{2TP_n + FP_n + FN_n}
+    \end{align}
+    \item IoU: Evaluates the intersection over union of the predicted and ground truth regions. It is widely used as a general evaluation metric in segmentation tasks.
+    \begin{align}
+        \text{IoU}_n = \frac{TP_n}{TP_n + FP_n + FN_n}
+    \end{align}
+
+    \item Precision: Evaluates the accuracy of the region extracted by the model. It was adopted to quantify the performance in suppressing excessive detection.
+    \begin{align}
+        \text{Precision}_n = \frac{TP_n}{TP_n + FP_n}
+    \end{align}
+
+    \item Recall: Evaluates the extent to which the ground truth region is detected. It was adopted specifically to verify the performance in preventing missed lesions.
+    \begin{align}
+        \text{Recall}_n = \frac{TP_n}{TP_n + FN_n}
+    \end{align}
+\end{itemize}
+
+\begin{table}[t]
+    \centering
+    \caption{Overview of the U-Net Architecture}
+    \label{tab:unet_architecture}
+    \begin{tabular}{lc}
+        \toprule
+        \textbf{Layer} & \textbf{Output Size} \\
+        \midrule
+        % ★★★ 表示するテキストを追加 ★★★
+        \multicolumn{2}{c}{\textit{--- Encoder ---}} \\
+        Input & $224 \times 224 \times 3$ \\
+        inc (DoubleConv) & $224 \times 224 \times 64$\\
+        down1 (MaxPool + DoubleConv) & $112 \times 112 \times 128$ \\
+        down2 (MaxPool + DoubleConv) & $56 \times 56 \times 256$ \\
+        down3 (MaxPool + DoubleConv) & $28 \times 28 \times 512$ \\
+        down4 (MaxPool + DoubleConv) & $14 \times 14 \times 512$ \\
+        \midrule
+        % ★★★ 表示するテキストを追加 ★★★
+        \multicolumn{2}{c}{\textit{--- Decoder ---}} \\
+        up1 (Upsample + DoubleConv) & $28 \times 28 \times 256$ \\
+        up2 (Upsample + DoubleConv) & $56 \times 56 \times 128$ \\
+        up3 (Upsample + DoubleConv) & $112 \times 112 \times 64$ \\
+        up4 (Upsample + DoubleConv) & $224 \times 224 \times 64$ \\
+        \midrule
+        outc (Conv2d) & $224 \times 224 \times 2$ \\
+        \bottomrule
+    \end{tabular}
 \end{table}
 
-%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Discussion}
+For each metric, we report the average value over the entire test dataset.
 
-Here we discuss the obtained results.
+\clearpage
