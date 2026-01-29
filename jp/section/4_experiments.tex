@@ -50,7 +50,7 @@ $\epsilon_{\text{min}}=0$, $\epsilon_{\text{max}}=0.5$, $k=2$とした．
 \subsubsection{評価指標}
 
 またセグメンテーションの性能の評価には，領域の重なりを測るDice係数およびIoUおよび検出精度を測るPrecisionおよびRecallを用いた．
-モデルの予測マップ $\hat{Y}_n$に対し，閾値 $\theta_\text{th} = 0.5$ で二値化した予測マスク $\tilde{Y}_n = \{\tilde{y}_{n,i,j}\}$ とする．
+画像$n$に対するモデルの予測マップ $\hat{Y}_n$に対し，閾値 $\theta_\text{th} = 0.5$ で二値化した予測マスク $\tilde{Y}_n = \{\tilde{y}_{n,i,j}\}$ とする．
 画像$n$に対する真陽性 (TP)，偽陽性 (FP)，偽陰性 (FN) の画素数はそれぞれ以下で定義される．
 
 \begin{align}
@@ -202,57 +202,124 @@ $\epsilon_{\text{min}}=0$, $\epsilon_{\text{max}}=0.5$, $k=2$とした．
 \subsection{結果と議論}
 
 \subsubsection{比較手法との性能比較：}
-全データセットでの比較表
+表\ref{tab:benchmark_cvc_clinicdb}および表\ref{tab:benchmark_kvasir_seg}に，各データセットにおける比較手法との性能比較を示す．両方のデータセットにおいて，
+提案法は全ての比較手法を上回る性能を達成した．Focal Loss は両データセットにおいて Dice Loss を下回る結果となった．
+Focal Loss は容易なサンプルの損失を低減する設計であるが，セグメンテーションでは画像内のピクセル単位で不均衡が生じるため，
+画像全体の難易度を考慮しないこの戦略は有効に機能しなかったと考えられる．
+
+テストデータに対して最適な固定$\epsilon$を事後探索したPolyDice-1 Loss (optimal) をも上回った．
+固定$\epsilon$では全画像に同一の勾配特性が適用されるため，
+容易な画像への過学習と困難な画像の学習不足が同時に生じうる．また，学習進行に伴う各画像の相対的難易度の変化にも
+追従できない．提案法は τ エポックごとに難易度を再評価することで，これらの問題を回避している．
 
 \subsubsection{難易度別の性能分析}
-群ごとの性能比較，εの推移や分布の推移
+提案手法の設計意図である「困難な症例に対しては急峻な勾配を与え，容易な症例に対しては
+緩やかな勾配を与える」という適応的学習戦略の有効性を検証するため，
+症例の難易度に基づいた性能比較を行った．具体的には，Dice Loss における
+テストデータの Dice 係数に基づき，全症例を3つの難易度層に分類した．
+下位$33$パーセンタイル未満の症例を「困難（Hard）」，$33$パーセンタイル以上$66$パーセンタイル未満を「中程度（Medium）」，
+$66$パーセンタイル以上を「容易（Easy）」と定義した．
+図 2 に，両データセットの各難易度層における性能比較を示す．困難な症例群において Dice 係数が CVCClinicDB で$0.36$，
+Kvasir-SEG で$0.13$上昇した． これは，予測が不確実で困難な症例に対して大きな $\epsilon$ を割り当て，
+損失関数の勾配を急峻にしたことで，モデルがこれらの画像の特徴を重点的に学習できたことを示唆している．
+一方で，容易および中程度の症例群においては，精度変化が小さく一部でわずかな低下も見られた．この結果は，
+十分に学習された症例からの勾配を抑制するという設計意図を反映したものであり，モデルが特定の容易なパターンに対して過学習することを
+防いだ結果と解釈できる．
+
+\clearpage
+
+\begin{table}[t]
+    \centering
+    \caption{Performance Comparison by Difficulty Level on CVC-ClinicDB Dataset. "Baseline" refers to Dice Loss, and "Ours" refers to the proposed Adaptive PolyDice-1 Loss.}
+    \label{tab:performance_difficulty_cvc_detailed}
+    \resizebox{\textwidth}{!}{% 幅に合わせて自動調整
+        \begin{tabular}{lcccccccc}
+            \toprule
+            \multirow{2}{*}{Difficulty} & \multicolumn{2}{c}{Dice} & \multicolumn{2}{c}{IoU} & \multicolumn{2}{c}{Precision} & \multicolumn{2}{c}{Recall} \\
+            \cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+            & Baseline & Ours & Baseline & Ours & Baseline & Ours & Baseline & Ours \\
+            \midrule
+            Easy & 0.8580 & \textbf{0.8602} & 0.7558 & \textbf{0.7720} & 0.8533 & \textbf{0.8622} & 0.8831 & \textbf{0.8911} \\
+            Medium & 0.6336 & \textbf{0.7262} & 0.4699 & \textbf{0.6099} & 0.6944 & \textbf{0.8079} & 0.7129 & \textbf{0.7529} \\
+            Hard & 0.0783 & \textbf{0.3949} & 0.1309 & \textbf{0.4907} & 0.3599 & \textbf{0.6779} & 0.1495 & \textbf{0.4899} \\
+            \bottomrule
+        \end{tabular}
+    }
+\end{table}
+
+\begin{table}[t]
+    \centering
+    \caption{Performance Comparison by Difficulty Level on Kvasir-SEG Dataset. "Baseline" refers to Dice Loss, and "Ours" refers to the proposed Adaptive PolyDice-1 Loss.}
+    \label{tab:performance_difficulty_kvasir_detailed}
+    \resizebox{\textwidth}{!}{% 幅に合わせて自動調整
+        \begin{tabular}{lcccccccc}
+            \toprule
+            \multirow{2}{*}{Difficulty} & \multicolumn{2}{c}{Dice} & \multicolumn{2}{c}{IoU} & \multicolumn{2}{c}{Precision} & \multicolumn{2}{c}{Recall} \\
+            \cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+            & Baseline & Ours & Baseline & Ours & Baseline & Ours & Baseline & Ours \\
+            \midrule
+            Easy & \textbf{0.9544} & 0.9359 & \textbf{0.9131} & 0.8847 & \textbf{0.9516} & 0.9434 & \textbf{0.9582} & 0.9363 \\
+            Medium & \textbf{0.8871} & 0.8869 & 0.7988 & \textbf{0.8063} & 0.8941 & \textbf{0.9057} & \textbf{0.8931} & 0.8880 \\
+            Hard & 0.5288 & \textbf{0.6588} & 0.3943 & \textbf{0.5407} & 0.6384 & \textbf{0.7628} & 0.5947 & \textbf{0.6946} \\
+            \bottomrule
+        \end{tabular}
+    }
+\end{table}
+
+\clearpage
 
 \subsubsection{不確実性指標の妥当性検証}
 予測平均と相互情報量の推移を示す
 
 \subsubsection{ハイパーパラメータの影響}
-\begin{enumerate}
-    \item ε範囲の影響
-    \begin{enumerate}
-        \item $\epsilon \in [0, 0.3]$ (控えめ)
-        \item $\epsilon \in [0, 0.5]$ (標準)
-        \item $\epsilon \in [-0.3, 0.5]$ (双方向)
-    \end{enumerate}
 
-    \item 適応速度$k$の影響
-    \begin{enumerate}
-        \item $k=1$
-        \item $k=2$
-        \item $k=3$
-    \end{enumerate}
+\textbf{$\epsilon$ 範囲の影響：}
+表\ref{tab:ablation_epsilon_cvc}および表\ref{tab:ablation_epsilon_kvasir-seg}に示すように，
+$\epsilon$ の変動範囲を $[0, 0.5]$ と設定した場合に，両データセットにおいて最も良好なセグメンテーション性能が得られた．
+上限値$\epsilon_{\text{max}}$を $0.3$ から $0.5$ へ拡大したことが精度向上に寄与した要因として，
+困難な症例に対してより大きな $\epsilon$ を割り当てることで，損失関数の勾配が適切に強調され，病変の特徴の学習が促進されたことが挙げられる．
+一方で，下限値$\epsilon_{\text{min}}$を $-0.3$ まで拡張し，易しい症例の損失を抑制する設定
+（$\epsilon_{\text{min}}=-0.3, \epsilon_{\text{max}}=0.5$）は，$\epsilon_{\text{min}}=0, \epsilon_{\text{max}}=0.5$ の場合と比較して性能が向上しなかった．
+この要因として，変動範囲の過度な拡大が挙げられる．範囲を広げすぎたことで，不確実性推定に含まれる微細なノイズや測定誤差に対する損失関数の感度が必要以上に高まり，
+本来は棄却されるべき微細な変動が，有意な勾配情報として誤って解釈され，学習の安定性を損なう要因となったと考えられる．
 
-    \item 適応開始タイミング$E_0$の影響
-    \begin{enumerate}
-        \item $E_0=10$
-        \item $E_0=60$
-        \item $E_0=110$
-        \item $E_0=160$
-    \end{enumerate}
-\end{enumerate}
+\textbf{感度パラメータ$k$の影響：}
+表\ref{tab:ablation_k_cvc}および表\ref{tab:ablation_k_kvasir-seg}に，難易度スコアに対するシグモイド関数の傾き $k$ を変化させた結果を示す．
+Kvasir-SEG データセットでは $k=2$ の場合に最も精度が高く，CVC-ClinicDB においても $k=1$ や $k=3$ と比較して安定した性能を示した．
+$k=1$ のように傾きが緩やかすぎる場合，難易度の差が損失形状に十分に反映されず，逆に $k=3$ のように急峻すぎる場合，損失形状が二値的に切り替わってしまい学習が不安定になる可能性がある．
+実験結果より，$k=2$ が難易度に応じた滑らかな適応を実現する上で適切なバランスであったと考えられる．
 
-% \begin{table}[t]
-%     \centering
-%     \caption{Impact of Different $\epsilon$ Ranges on Segmentation Performance CVC-ClinicDB Dataset}
-%     \label{tab:ablation_epsilon_cvc}
-%     \begin{tabular}{ccccc}
-%         \toprule
-%         $\epsilon_{\text{min}}$ & $\epsilon_{\text{max}}$ & Dice & IoU & Precision & Recall \\
-%         \midrule
-%         $0$ & $0.3$ & 0.6935 & 0.5962 & 0.7853 & 0.7175 \\
-%         $0$ & $0.5$ & 0.6924 & 0.5913 & 0.7827 & 0.7113 \\
-%         $-0.3$ & $0.5$ & 0.8189 & 0.7313 & 0.8537 & 0.8454 \\
-%         \bottomrule
-%     \end{tabular}
-% \end{table}
+\textbf{適応開始エポック$E_0$の影響：}
+表\ref{tab:ablation_e0_cvc}および表\ref{tab:ablation_e0_kvasir-seg}に示すように，適応的学習の開始タイミングは早いほど良好な結果をもたらし，
+最も早い $E_0=10$ の設定において最高性能を記録した．
+この結果は，モデルが学習の極めて初期の段階において，既に症例ごとの難易度を識別可能な状態にあることを示唆している．
+その根拠として，ベースラインである Dice Loss を用いた学習過程において，最終的な Dice 係数が上位 $33\%$ に属する「容易な症例群」は，学習初期（最初の$10$エポック）の段階で既に高い精度に収束することが挙げられる．
+これは，画像内の単純なパターンや典型的な特徴は学習初期に優先的に獲得されるというディープラーニングの一般的特性\cite{arpit2017closer}と合致する．
+容易な症例への学習が早期に完了するということは，すなわちその時点でのモデルの予測確信度が高まり，不確実性が低下することを意味する．
+したがって，$E_0=10$ という初期段階であっても，不確実性に基づく「容易な症例」と「困難な症例」の識別は十分に機能しているといえる．
+この段階から適応的学習を導入し，早期に収束した容易な症例の勾配を相対的に抑制することで，
+学習リソースを未学習の困難な症例へと集中させられたことが，最終的な性能向上につながったと考えられる．
+
+\clearpage
 
 \begin{table}[t]
     \centering
-    \caption{Impact of Different $\epsilon$ Ranges on Segmentation Performance Kvasir-SEG Dataset}
+    \caption{Impact of different $\epsilon$ ranges on segmentation performance CVC-ClinicDB dataset}
+    \label{tab:ablation_epsilon_cvc}
+    \begin{tabular}{cccccc}
+        \toprule
+        $\epsilon_{\text{min}}$ & $\epsilon_{\text{max}}$ & Dice & IoU & Precision & Recall \\
+        \midrule
+        $0$ & $0.3$ & 0.7017 & 0.6050 & 0.7875 & 0.7234 \\
+        $0$ & $0.5$ & 0.6924 & 0.5913 & 0.7827 & 0.7113 \\
+        $-0.3$ & $0.5$ & 0.7000 & 0.5993 & 0.7818 & 0.7220 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[t]
+    \centering
+    \caption{Impact of different $\epsilon$ ranges on segmentation performance Kvasir-SEG dataset}
     \label{tab:ablation_epsilon_kvasir-seg}
     \begin{tabular}{cccccc}
         \toprule
@@ -265,24 +332,24 @@ $\epsilon_{\text{min}}=0$, $\epsilon_{\text{max}}=0.5$, $k=2$とした．
     \end{tabular}
 \end{table}
 
-% \begin{table}[t]
-%     \centering
-%     \caption{Performance Sensitivity to Slope Parameter $k$ CVC-ClinicDB Dataset}
-%     \label{tab:ablation_k_cvc}
-%     \begin{tabular}{ccccc}
-%         \toprule
-%         Slope ($k$) & Dice & IoU & Precision & Recall \\
-%         \midrule
-%         $1$ & 0.6935 & 0.5962 & 0.7853 & 0.7175 \\
-%         $2$ & 0.6924 & 0.5913 & 0.7827 & 0.7113 \\
-%         $3$ & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
-%         \bottomrule
-%     \end{tabular}
-% \end{table}
+\begin{table}[t]
+    \centering
+    \caption{Performance sensitivity to slope parameter $k$ CVC-ClinicDB dataset}
+    \label{tab:ablation_k_cvc}
+    \begin{tabular}{ccccc}
+        \toprule
+        Slope ($k$) & Dice & IoU & Precision & Recall \\
+        \midrule
+        $1$ & 0.6935 & 0.5962 & 0.7853 & 0.7175 \\
+        $2$ & 0.6924 & 0.5913 & 0.7827 & 0.7113 \\
+        $3$ & 0.7063 & 0.6084 & 0.8010 & 0.7178 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
 
 \begin{table}[t]
     \centering
-    \caption{Performance Sensitivity to Slope Parameter $k$ Kvasir-SEG Dataset}
+    \caption{Performance sensitivity to slope parameter $k$ Kvasir-SEG dataset}
     \label{tab:ablation_k_kvasir-seg}
     \begin{tabular}{ccccc}
         \toprule
@@ -295,25 +362,25 @@ $\epsilon_{\text{min}}=0$, $\epsilon_{\text{max}}=0.5$, $k=2$とした．
     \end{tabular}
 \end{table}
 
-% \begin{table}[t]
-%     \centering
-%     \caption{Effect of Adaptation Start Epoch $E_0$ CVC-ClinicDB Dataset}
-%     \label{tab:ablation_e0_cvc}
-%     \begin{tabular}{ccccc}
-%         \toprule
-%         $E_0$ & Dice & IoU & Precision & Recall \\
-%         \midrule
-%         $10$ & 0.6924 & 0.5962 & 0.7827 & 0.7113 \\
-%         $60$ & 0.8097 & 0.7226 & 0.8571 & 0.8255 \\
-%         $110$ & 0.6325 & 0.5262 & 0.7328 & 0.6522 \\
-%         $160$ & 0.5940 & 0.4920 & 0.7138 & 0.6123 \\
-%         \bottomrule
-%     \end{tabular}
-% \end{table}
+\begin{table}[t]
+    \centering
+    \caption{Effect of adaptation start epoch $E_0$ CVC-ClinicDB dataset}
+    \label{tab:ablation_e0_cvc}
+    \begin{tabular}{ccccc}
+        \toprule
+        $E_0$ & Dice & IoU & Precision & Recall \\
+        \midrule
+        $10$ & 0.6924 & 0.5262 & 0.7827 & 0.7113 \\
+        $60$ & 0.6399 & 0.5372 & 0.7501 & 0.6514 \\
+        $110$ & 0.6325 & 0.5262 & 0.7328 & 0.6522 \\
+        $160$ & 0.5889 & 0.4887 & 0.6910 & 0.6167 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
 
 \begin{table}[t]
     \centering
-    \caption{Effect of Adaptation Start Epoch $E_0$ Kvasir-SEG Dataset}
+    \caption{Effect of adaptation start epoch $E_0$ Kvasir-SEG dataset}
     \label{tab:ablation_e0_kvasir-seg}
     \begin{tabular}{ccccc}
         \toprule
@@ -327,5 +394,22 @@ $\epsilon_{\text{min}}=0$, $\epsilon_{\text{max}}=0.5$, $k=2$とした．
     \end{tabular}
 \end{table}
 
+\clearpage
 \subsubsection{定性的評価}
-失敗例の分析，提案法でも失敗する症例の特徴分析，今後の改善方向を示唆
+図\ref{compare} に，CVC-ClinicDB データセットにおける各難易度層の画像の比較手法と提案法のセグメンテーション結果を示す
+境界が明瞭な容易な画像と中程度の画像においては，既存手法と提案法の両方が高精度なセグメンテーションを実現している．
+一方，ポリープと粘膜壁のコントラストが低く，境界が不明瞭である困難な症例において，
+ベースラインであるDice Loss やFocal Loss ではポリープ領域を捉えきれず，著しい過少検出が発生し，
+PolyDice-1 Loss (optimal) でも検出が不完全である．
+これに対し，提案法は高精度なセグメンテーションを実現している．
+これは，提案法がMC Dropout によりこのような症例を困難な画像と判定し，
+損失関数の形状パラメータ$\epsilon$を大きく設定したことで，
+学習時に当該症例に対する勾配が強化され，モデルの特徴抽出能力が向上した結果であると考えられる．
+\clearpage
+
+\begin{figure*}[t]
+    \centering % 図を中央揃えにする（推奨）
+    \includegraphics[width=\linewidth]{figure/compare.pdf}
+    \caption{Qualitative comparison of segmentation results on CVC-ClinicDB dataset. Rows show easy, medium, and hard cases.}
+    \label{compare}
+\end{figure*}

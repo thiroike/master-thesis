@@ -43,14 +43,14 @@ $E_0$はモデルが基礎的なセグメンテーション能力を獲得する
 
 適応的学習期間（$e \geq E_0$）においては，周期 $\tau$ ごとに不確実性の再評価と $\epsilon$ の更新を行う．
 すなわち，更新は $e \in \{E_0, E_0+\tau, E_0+2\tau, \ldots\}$ を満たすエポックの学習開始前に実行される．
-更新の際は，その時点のモデルパラメータ $\mathbf{W}$ を固定し，訓練データの各画像 $\mathbf{X}_n \in \{\mathbf{X}_n\}_{n=1}^{N}$ に対して Dropout 率 $p \in (0,1)$ で $T$ 回の確率的推論を行う．
-得られる予測集合を $\{\hat{\mathbf{Y}}^{(n)}\}_{n=1}^{T}$ とする：
+更新の際は，その時点のモデルパラメータ $\mathbf{W}$ を固定し，訓練データの各画像 $\mathbf{X}_n$ に対して Dropout 率 $p \in (0,1)$ で $T$ 回の確率的推論を行う．
+得られる予測集合を $\{\hat{\mathbf{Y}}_n ^ {(t)}\}_{t=1}^{T}$ とする：
 %
 \begin{equation}
-    \hat{\mathbf{Y}}^{(n)} = f_{\mathbf{W}}(\mathbf{X}_n; \mathbf{z}^{(n)}), \quad \mathbf{z}^{(n)} \sim \text{Bernoulli}(1-p)
+    \hat{\mathbf{Y}}_n ^ {(t)} = f_{\mathbf{W}}(\mathbf{X}_n; \mathbf{z}^{(t)}), \quad \mathbf{z}^{(t)} \sim \text{Bernoulli}(1-p)
 \end{equation}
 %
-ここで，$\mathbf{z}^{(n)}$ は $n$ 回目の推論における Dropout マスクであり，$\hat{\mathbf{Y}}^{(n)}$ はその予測確率マップである．
+ここで，$\mathbf{z}^{(t)}$ は $t$ 回目の推論における Dropout マスクであり，$\hat{\mathbf{Y}}_n ^ {(t)}$ はその予測確率マップである．
 この確率的推論により得られる予測のばらつきから，モデルの認識的不確実性を定量化する．
 
 \subsubsection{ピクセル単位の不確実性指標の計算}
@@ -58,7 +58,7 @@ MC Dropoutによって得られた $T$ 枚の予測画像に対し，ピクセ�
 認識的不確実性を直接捉えることができる相互情報量 $I_{n, i, j}$ を計算する．
 
 \begin{equation}
-    I_{n, i,j} = \underbrace{H\left( \frac{1}{T} \sum_{t=1}^{T} \hat{y}_{n, i,j}^{(t)} \right)}_{\text{Entropy of Mean}} - \underbrace{\frac{1}{T} \sum_{t=1}^{T} H\left( \hat{y}_{n, i,j}^{(t)} \right)}_{\text{Mean of Entropy}}
+    I_{n, i, j} = \underbrace{H\left( \frac{1}{T} \sum_{t=1}^{T} \hat{y}_{n, i,j}^{(t)} \right)}_{\text{Entropy of Mean}} - \underbrace{\frac{1}{T} \sum_{t=1}^{T} H\left( \hat{y}_{n, i,j}^{(t)} \right)}_{\text{Mean of Entropy}}
 \end{equation}
 
 ここで，$H(p)$ は2値分類におけるバイナリ・エントロピー関数であり，次式で定義される．
@@ -98,12 +98,12 @@ $T$ 回の推論結果を平均化した後の予測分布に対する不確実�
 
 次に，各サンプルの相対的な難易度を決定するため，データセット全体の難易度スコア分布に基づいて正規化を行う．
 ここでの目的は，画像毎の数値的なスケールの差異を吸収し，各画像が分布全体の中で相対的にどの程度難しいかを評価することである．
-データセット全体のスコア集合$\{D_n\}_{n = 1} ^ N$に対し， $q$ パーセンタイル値を $D_q$，標準偏差を $\sigma_D$ とすると，正規化されたスコア $D_{\text{norm}_n}$ は次のように計算される．
+データセット全体のスコア集合$\{D_n\}_{n = 1} ^ N$に対し， $q$ パーセンタイル値を $D_q$，標準偏差を $\sigma_D$ とすると，正規化されたスコアは次のように計算される．
 
 \begin{equation}
-    D_{\text{norm}_n} = \frac{D_n - D_{q}}{\sigma_D + \delta}
+    D_{n} ^ {\text{norm}} = \frac{D_n - D_{q}}{\sigma_D + \delta}
 \end{equation}
-ここで，$\delta$ は数値的安定性のための微小定数である．
+ここで，$\delta > 0$ は数値的安定性のための微小定数である．
 $D_q$ による減算は，後述する制御関数への入力を合わせるための中心化をする役割を持つ．
 分布の平均値ではなく$q$パーセンタイル値を用いることで，容易なサンプルが多数を占める分布においても，
 外れ値の影響を受けずに難易度の基準点を柔軟に設定できる．
@@ -113,11 +113,11 @@ $\sigma_D$ による除算は尺度の統一であり，
 \subsection{適応的損失形状制御}
 
 \subsubsection{制御関数の設計}
-得られた難易度指標 $D_{\text{norm}_n}$ に基づき，PolyDice-1 Loss の形状パラメータ $\epsilon$ を動的に更新する．
+得られた難易度指標 $D_{n} ^ {\text{norm}}$ に基づき，PolyDice-1 Loss の形状パラメータ $\epsilon$ を動的に更新する．
 更新式には以下のシグモイドベースの制御関数を用いる．
 
 \begin{equation}
-    \epsilon = \epsilon_{\text{min}} + (\epsilon_{\text{max}} - \epsilon_{\text{min}}) \sigma(k \cdot D_{\text{norm}_n})
+    \epsilon = \epsilon_{\text{min}} + (\epsilon_{\text{max}} - \epsilon_{\text{min}}) \sigma(k \cdot D_{n} ^ {\text{norm}})
 \end{equation}
 ここで，$\sigma(x) = (1 + e^{-x})^{-1}$標準シグモイド関数，$k > 0$ はパラメータであり，$\epsilon_{\text{min}}, \epsilon_{\text{max}}$ は $\epsilon$ の変動範囲である．
 
@@ -127,7 +127,7 @@ $\sigma_D$ による除算は尺度の統一であり，
 シグモイド関数を用いることで，難易度が低い領域から高い領域への遷移を滑らかに行いつつ，出力値を常に所定の範囲内に厳密に制約することが可能となる．
 パラメータ $k$ は関数の応答感度を制御し，図\ref{sigmoid} に示すようにその値が大きいほど難易度判定の境界が急峻になり，小さいほど滑らかな遷移となる．
 
-この制御により，難しい画像（$D_{\text{norm}_n}$が大きい）に対しては，大きな$\epsilon$を割り当て，
+この制御により，難しい画像（$D_{n} ^ {\text{norm}}$が大きい）に対しては，大きな$\epsilon$を割り当て，
 損失関数の勾配を急峻にする．これは，同じ予測誤差に対して
 より大きな損失値と勾配を与えることを意味し，結果として難しい画像からの学習信号が相対的に強化される．
 一方，すでに十分に学習できている簡単な画像には小さな$\epsilon$を割り当て，過学習を防ぎつつ学習リソースを難しい画像に集中させる．
