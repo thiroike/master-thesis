@@ -1,9 +1,14 @@
 In this paper, we proposed an adaptive learning method for medical image segmentation.
-The proposed method quantifies the model's epistemic uncertainty using MC Dropout and utilizes this as a metric for segmentation difficulty.
-By dynamically controlling the shape parameter of the PolyDice-1 Loss based on the obtained difficulty metric,
-we realized an adaptive learning strategy that assigns steeper gradients to difficult images and gentler gradients to easy images.
+The proposed method quantifies the epistemic uncertainty of the model using MC Dropout and utilizes it as an indicator of segmentation difficulty for each image.
+By dynamically controlling the shape parameters of the PolyDice-1 Loss based on the obtained difficulty metrics,
+we realized adaptive gradient adjustment tailored to the model's learning state.
+Our results confirmed that this dynamic control facilitates the training of challenging cases.
+
 In evaluation experiments using the CVC-ClinicDB and Kvasir-SEG datasets,the proposed method achieved performance surpassing
-not only existing methods such as Dice Loss and Focal Loss but also the ideal fixed parameter setting.In particular,
-for cases that were difficult to segment with conventional methods,the Dice coefficient improved by $0.36$ on the CVC-ClinicDB dataset,
+not only existing methods such as Dice Loss and Focal Loss but also the fixed parameter setting optimized for the test data.
+In particular, for cases that were difficult to segment with conventional methods, the Dice coefficient improved by $0.32$ on the CVC-ClinicDB dataset,
 demonstrating the effectiveness of the proposed adaptive learning strategy for detecting challenging lesions.
-Future work includes the automatic optimization of hyperparameters and the extension of the method to 3D medical images such as CT and MRI.
+
+One limitation of the proposed method is the increased computational cost compared to standard training due to the multiple inferences required for uncertainty estimation.
+Additionally, the current framework relies on empirically determined hyperparameters, and establishing a mechanism for their automatic optimization remains a challenge.
+Future work will focus on improving computational efficiency and extending the framework to 3D medical images, such as CT and MRI, to verify its versatility across a broader range of clinical tasks.

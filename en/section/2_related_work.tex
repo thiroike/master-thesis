@@ -1,8 +1,9 @@
 \subsection{PolyDice Loss}
+
 Dice Loss, which is widely used in medical image segmentation, is robust against class imbalance
-but is constrained by having a fixed shape for all images.In this study,
+but is constrained by having a fixed shape for all images. In this study,
 we adopt PolyDice Loss \cite{polydice}, which extends Dice Loss via polynomial expansion,
-specifically its practical form, PolyDice-1 Loss.PolyDice-1 Loss allows
+specifically its practical form, PolyDice-1 Loss. PolyDice-1 Loss allows
 for controlling the shape of the loss function with a single parameter $\epsilon$,
 enabling adjustment of the gradient steepness according to the difficulty of the image.
 
@@ -12,47 +13,53 @@ In the segmentation task, let the model's predicted probability map be $\hat{\ma
 and the ground truth mask for that image be $\mathbf{Y} = \{{y}_{i,j}\}_{i,j} \in \mathbb R ^ {H \times W}$.
 The Dice Loss is defined by the following equation:
 \begin{equation}
-    \mathcal{L}{\text{Dice}}(\hat{\mathbf{Y}}, \mathbf{Y}) = 1 - \frac{2 \sum{j=1}^{W} \sum_{i=1}^{H} \hat{y}{i, j} y{i, j}}{\sum_{j=1}^{W} \sum_{i=1}^{H}(\hat{y_{i, j}} ^ 2 + y_{i, j} ^ 2)}
+    \mathcal{L}_{\text{Dice}}(\hat{\mathbf{Y}}, \mathbf{Y}) = 1 - \frac{2 \sum_{j=1}^{W} \sum_{i=1}^{H} \hat{y}_{i, j} y_{i, j}}{\sum_{j=1}^{W} \sum_{i=1}^{H}(\hat{y}_{i, j} ^ 2 + y_{i, j} ^ 2)}\text{.}
 \end{equation}
+
 \subsubsection{Geometric Interpretation and Polynomial Expansion}
 By flattening the predicted probability map $\hat{\mathbf{Y}}$ and the ground truth mask $\mathbf{Y}$
 into vectors $\hat{\mathbf{y}}$ and $\mathbf{y}$ of length $HW$, respectively, Dice Loss can be decomposed as follows:
 \begin{equation}
-    \mathcal{L}_{\text{Dice}} = 1 - s \cos \theta
+    \mathcal{L}_{\text{Dice}} = 1 - s \cos \theta \text{,}
 \end{equation}
-Here, $s = \frac{2 \langle \hat{\mathbf{y}}, {\mathbf{y}} \rangle}{\Vert \hat{\mathbf{y}} \Vert ^ 2 + \Vert {\mathbf{y}} \Vert ^ 2}$
-represents the scale component, and$\theta = \arccos{\frac{\langle \hat{\mathbf{y}}, {\mathbf{y}}\rangle}{\Vert \hat{\mathbf{y}} \Vert \Vert {\mathbf{y}}\Vert}}$
-represents the angle between the two vectors.Through this decomposition, Dice Loss can be understood as the product of the scale component $s$ and $\cos \theta$.
-We derive the polynomial representation of PolyDice Loss by applying Taylor expansion to the direction component $\cos \theta$.As training progresses, 
-the prediction $\hat{\mathbf{y}}$ approaches the ground truth $\mathbf{y}$, so the angle $\theta$ between the two vectors approaches $0$.Utilizing this property, 
+where $s = \frac{2 \langle \hat{\mathbf{y}}, {\mathbf{y}} \rangle}{\Vert \hat{\mathbf{y}} \Vert ^ 2 + \Vert {\mathbf{y}} \Vert ^ 2}$
+represents the scale component, and $\theta = \arccos{\frac{\langle \hat{\mathbf{y}}, {\mathbf{y}}\rangle}{\Vert \hat{\mathbf{y}} \Vert \Vert {\mathbf{y}}\Vert}}$
+represents the angle between the two vectors. Through this decomposition, Dice Loss can be understood as the product of the scale component $s$ and $\cos \theta$.
+
+% ▼▼▼ ここに空行を追加しました ▼▼▼
+
+We derive the polynomial representation of PolyDice Loss by applying Taylor expansion to the direction component $\cos \theta$. As training progresses,
+the prediction $\hat{\mathbf{y}}$ approaches the ground truth $\mathbf{y}$, so the angle $\theta$ between the two vectors approaches $0$. Utilizing this property,
 $\cos{\theta}$ can be approximated by Taylor expansion around $\theta = 0$ as follows:
 \begin{equation}
-    \cos{\theta} = 1 - \frac{\theta ^ 2}{2!} + \frac{\theta ^ 4}{4!} - \cdots
+    \cos{\theta} = 1 - \frac{\theta ^ 2}{2!} + \frac{\theta ^ 4}{4!} - \cdots\text{.}
 \end{equation}
 Substituting this into the Dice Loss and simplifying yields the general form of PolyDice Loss:
 \begin{align}
-    \mathcal{L}_{\text{PolyDice}} &= 1 - s\left(1 - \frac{\theta ^ 2}{2!} + \frac{\theta ^ 4}{4!} - \cdots\right) \\
-    &= (1 - s) + s \sum_{k = 1}^{\infty} \alpha_k \theta ^ {2k}
+    \mathcal{L}_{\text{PolyDice}} &= 1 - s\left(1 - \frac{\theta ^ 2}{2!} + \frac{\theta ^ 4}{4!} - \cdots\right) \nonumber \\
+    &= (1 - s) + s \sum_{k = 1}^{\infty} \alpha_k \theta ^ {2k}\text{,}
 \end{align}
-Here, $\alpha_k=\frac{(-1)^{k-1}}{(2k)!}$ is the sign coefficient for each Taylor term.
+where $\alpha_k=\frac{(-1)^{k-1}}{(2k)!}$ is the sign coefficient for each Taylor term.
 
-\subsubsection{PolyDice-1 Loss}PolyLoss \cite{leng2022polyloss} achieved practical performance improvements in classification tasks by expanding Cross-Entropy Loss into a polynomial and making only the first term adjustable.
+\subsubsection{PolyDice-1 Loss}
+PolyLoss \cite{leng2022polyloss} achieved practical performance improvements in classification tasks by expanding Cross-Entropy Loss into a polynomial and making only the first term adjustable.
 PolyDice Loss \cite{polydice} applies this approach to Dice Loss, and in this study, we adopt PolyDice-1 Loss, which adjusts only the first term.
 \begin{equation}
-    \mathcal{L}_{\text{PolyDice-1}} = (1 - s) + s \left(\frac{1}{2} + \epsilon\right) \theta^2
+    \mathcal{L}_{\text{PolyDice-1}} = (1 - s) + s \left(\frac{1}{2} + \epsilon\right) \theta^2 \text{,}
 \end{equation}
-
-Here, $\epsilon \in \mathbb{R}$ is a hyperparameter that controls the shape of the loss function.
-Figure \ref{polydice} shows the shape change of PolyDice-1 Loss according to $\epsilon$.When $\epsilon > 0$, 
+where $\epsilon \in \mathbb{R}$ is a hyperparameter that controls the shape of the loss function.
+Fig. \ref{polydice} shows the shape change of PolyDice-1 Loss according to $\epsilon$. When $\epsilon > 0$, 
 the penalty for prediction errors is strengthened, and when $\epsilon < 0$, 
-it is relaxed.This characteristic of flexible shape control plays an important role in the adaptive learning framework of this study.
+it is relaxed. This characteristic of flexible shape control plays an important role in the adaptive learning framework of this study.
 In the proposed method described later, dynamically adjusting this $\epsilon$ enables gradient control according to the difficulty of individual images,
 making it possible to optimize the learning strategy on a per-sample basis.
 
 \clearpage
 
 \begin{figure}
-    \includegraphics[width=\columnwidth]{figure/loss.pdf}\caption{Plot of PolyDice-1 Loss ($s = 0.1$)}
+    \includegraphics[width=\columnwidth]{figure/loss.pdf}
+    \caption{Effect of the shape parameter $\epsilon$ on PolyDice-1 Loss. The loss function is plotted as a function of $\theta$ (the angle between prediction and ground truth vectors) with $s = 0.1$.
+    Larger $\epsilon$ values result in steeper gradients near $\theta = 0$, amplifying the penalty for prediction errors.}
     \label{polydice}
 \end{figure}
 
@@ -64,20 +71,26 @@ making it possible to optimize the learning strategy on a per-sample basis.
 
 Uncertainty associated with deep learning model predictions is broadly classified into aleatoric uncertainty and epistemic uncertainty based on its source \cite{smith2018understanding}.
 
-Aleatoric Uncertainty stems from information deficiency intrinsic to the data itself, such as noise caused by imaging devices, low resolution, or physical ambiguity of tissue boundaries.
+Aleatoric uncertainty stems from information deficiency intrinsic to the data itself, such as noise caused by imaging devices, low resolution, or physical ambiguity of tissue boundaries.
 Since this uncertainty is an intrinsic statistical property of the data, it has the characteristic of not being resolved even by adding training data from the same domain.
 
-Epistemic Uncertainty stems from unlearned patterns by the model or a lack of knowledge due to insufficient training data.
+Epistemic uncertainty stems from unlearned patterns by the model or a lack of knowledge due to insufficient training data.
 This can be reduced by adding appropriate training data and allowing the model to describe the target distribution in more detail.
 An image with high epistemic uncertainty indicates that the model has not acquired stable feature representations and the prediction is in an unstable state.
 In this study, we utilize this epistemic uncertainty as an indicator reflecting the segmentation difficulty of an image.
 
-\subsubsection{Principle and Application of MC Dropout}Dropout was proposed as a regularization technique to prevent overfitting in neural networks \cite{JMLR:v15:srivastava14a}.
+\subsubsection{Principle and Application of MC Dropout}
+Dropout was proposed as a regularization technique to prevent overfitting in neural networks \cite{JMLR:v15:srivastava14a}.
 It improves the model's generalization performance by randomly inactivating neurons in each layer with probability $p$ during training.
 Typically, Dropout is disabled during inference, and deterministic prediction is performed with all neurons activated.
+
 MC Dropout \cite{pmlr-v48-gal16} is a method that estimates the model's epistemic uncertainty by enabling Dropout not only during training but also during inference.
 When inference is performed with Dropout enabled, different neurons are inactivated in each inference pass, effectively yielding predictions from different sub-networks.
-By executing this stochastic inference multiple times for the same input, a distribution of predictions can be obtained.Gal and Ghahramani \cite{pmlr-v48-gal16} showed that
-training a neural network with Dropout applied is mathematically equivalent to an approximation in Bayesian inference. 
+By executing this stochastic inference multiple times for the same input, a distribution of predictions can be obtained.
+
+Gal and Ghahramani \cite{pmlr-v48-gal16} showed that
+training a neural network with Dropout applied is mathematically equivalent to an approximation in Bayesian inference.
 Through this theoretical framework, the predictive distribution obtained by MC Dropout can be interpreted as an approximation of predictive uncertainty based on the posterior distribution of model parameters,
-i.e., epistemic uncertainty.The proposed method utilizes the epistemic uncertainty estimated by MC Dropout as an indicator reflecting the segmentation difficulty of images and employs it for the adaptive control of the loss function.
+i.e., epistemic uncertainty. 
+
+The proposed method utilizes the epistemic uncertainty estimated by MC Dropout as an indicator reflecting the segmentation difficulty of images and employs it for the adaptive control of the loss function.

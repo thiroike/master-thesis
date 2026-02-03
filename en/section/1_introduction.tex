@@ -1,7 +1,7 @@
 Medical image segmentation is an indispensable technology in diagnostic support and treatment planning,
 requiring the extraction of regions corresponding to normal or abnormal tissues.
 Clinical applications are advancing rapidly, particularly in the detection of colorectal polyps~\cite{ji2022video}
-and organs at risk (OARs) in head and neck cancer radiotherapy~\cite{maleki2020machine}.
+and organs at risk in head and neck cancer radiotherapy~\cite{maleki2020machine}.
 
 However, medical image segmentation presents inherent challenges.
 A particularly significant issue is class imbalance.
@@ -24,11 +24,11 @@ In this study, we propose an adaptive learning framework that integrates these t
 For controlling the shape of the loss function, we employ PolyDice Loss~\cite{polydice},
 which is obtained by the polynomial expansion of Dice Loss. PolyDice Loss is suitable for adaptive learning
 because it allows for continuous control of the loss function's shape using optimal parameters for each image.
-To quantify difficulty, we use uncertainty estimation via Monte Carlo Dropout~\cite{pmlr-v48-gal16} (hereinafter referred to as MC Dropout).
+To quantify difficulty, we use uncertainty estimation via Monte Carlo （MC）Dropout~\cite{pmlr-v48-gal16}.
 MC Dropout enables the efficient estimation of the model's epistemic uncertainty by enabling dropout during inference.
 This uncertainty reflects the degree of the model's lack of confidence in segmenting the image and can be utilized as an indicator of segmentation difficulty.
-The proposed method dynamically controls the shape parameter of the PolyDice Loss based on the estimated uncertainty metric,
-applying steep gradients to difficult images and gentle gradients to easy images, thereby aiming to realize efficient and robust learning.
+The proposed method dynamically controls the shape parameters of the PolyDice Loss based on estimated uncertainty metrics.
+It aims to achieve efficient and robust learning by assigning steeper gradients to images for which the model currently lacks confidence, while providing gentler gradients to those where the model can already produce stable predictions.
 
 The main contributions of this study are as follows:
 \begin{enumerate}
