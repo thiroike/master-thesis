@@ -48,7 +48,7 @@ PolyLoss\cite{leng2022polyloss}は分類タスクにおいてCross-Entropy Loss�
     \mathcal{L}_{\text{PolyDice-1}} = (1 - s) + s \left(\frac{1}{2} + \epsilon\right) \theta^2
 \end{equation}
 ここで，$\epsilon \in \mathbb{R}$は損失関数の形状を制御するハイパーパラメータである．
-図\ref{polydice}に，$\epsilon$に応じたPolyDice-1 Lossの形状変化を示す．
+Fig. \ref{polydice}に，$\epsilon$に応じたPolyDice-1 Lossの形状変化を示す．
 $\epsilon > 0$では予測誤差に対するペナルティが強化され，$\epsilon < 0$では緩和される．
 この柔軟な形状制御が可能な特性は，本研究の適応的学習フレームワークにおいて重要な役割を果たす．
 後述する提案手法では，この$\epsilon$を動的に調整することで，個々の画像の難易度に応じた勾配制御を実現し，学習戦略をサンプル単位で最適化することを可能にしている．
@@ -57,7 +57,8 @@ $\epsilon > 0$では予測誤差に対するペナルティが強化され，$\e
 
 \begin{figure}
     \includegraphics[width=\columnwidth]{figure/loss.pdf}
-    \caption{Plot of PolyDice-1 Loss ($s = 0.1$)}
+    \caption{Effect of the shape parameter $\epsilon$ on PolyDice-1 Loss. The loss function is plotted as a function of $\theta$ (the angle between prediction and ground truth vectors) with $s = 0.1$.
+    Larger $\epsilon$ values result in steeper gradients near $\theta = 0$, amplifying the penalty for prediction errors.}
     \label{polydice}
 \end{figure}
 

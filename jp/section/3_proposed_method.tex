@@ -6,7 +6,7 @@ $\mathbf{Y}_n = \{y_{n,i,j}\}_{i,j} \in \mathbb{R}^{H \times W}$ は対応する
 MC Dropout による不確実性推定では，各画像に対して $T$ 回の確率的推論を行う．
 $t$ 回目の推論（$t \in \{1, \ldots, T\}$）における予測確率マップを $\hat{\mathbf{Y}}_n^{(t)} = \{\hat{y}_{n,i,j}^{(t)}\}_{i,j}$ と表記する．
 
-図\ref{method} に提案手法の概要を示す．
+Fig. \ref{method} に提案手法の概要を示す．
 本手法の設計は，主に以下の2つの観点に基づいている．
 第一に，学習サンプルに対する難易度評価を，学習プロセスの中で動的に更新する点である．
 画像の難易度は絶対的なものではなく，モデルの学習進捗によって変化する相対的なものであるため，
@@ -18,7 +18,7 @@ $t$ 回目の推論（$t \in \{1, \ldots, T\}$）における予測確率マッ�
 
 提案法では，学習中各画像に対して $\tau$ エポックごとに MC Dropout を用いて画像毎に複数枚推論を行い，予測のばらつきから不確実性を定量化する．
 この不確実性情報は，モデルがその画像のセグメンテーションにおいてどの程度の確信を持てないかを反映する．
-その後，この不確実性情報を画像単位に集約し，PolyDice Loss の形状を動的に制御することで，難しい画像には急峻な勾配を，簡単な画像には緩やかな勾配を与える．
+その後，この不確実性情報を画像単位に集約し，PolyDice Loss の形状を動的に制御することで，モデルが現時点で確信を持てない画像には急峻な勾配を，既に安定した予測が可能な画像には緩やかな勾配を与える．
 更新された $\epsilon$ を次の $\tau$ エポック間の学習に適用することで，学習の進行度に応じて最適化の重み付けを動的に変化させる適応的学習を実現する．
 
 \clearpage
@@ -26,7 +26,8 @@ $t$ 回目の推論（$t \in \{1, \ldots, T\}$）における予測確率マッ�
 \begin{figure}
     \includegraphics[width=\columnwidth]{figure/method.pdf}
     \caption{Overview of the proposed adaptive learning framework.
-The process consists of two phases: uncertainty estimation and adaptive training. Every $\tau$ epochs, the model evaluates image difficulty using MC Dropout and updates the loss shape parameter $\epsilon$. This dynamic control assigns steeper gradients to harder samples, enabling difficulty-aware optimization.}
+    The framework alternates between (1) the adaptive control phase, executed every $\tau$ epochs, which estimates image difficulty via MC Dropout and updates the loss shape parameter $\epsilon$ for each sample;
+    and (2) the training phase, which optimizes the model using sample-specific $\epsilon$ values. This design enables dynamic gradient adjustment based on current model uncertainty.}
     \label{method}
 \end{figure}
 
@@ -125,7 +126,7 @@ $\sigma_D$ による除算は尺度の統一であり，
 ステップ関数のような急激な切り替えは学習の安定性を損なう恐れがあり，
 線形関数ではパラメータ$\epsilon$が適切な範囲$[\epsilon_{\text{min}}, \epsilon_{\text{max}}]$ を逸脱する可能性がある．
 シグモイド関数を用いることで，難易度が低い領域から高い領域への遷移を滑らかに行いつつ，出力値を常に所定の範囲内に厳密に制約することが可能となる．
-パラメータ $k$ は関数の応答感度を制御し，図\ref{sigmoid} に示すようにその値が大きいほど難易度判定の境界が急峻になり，小さいほど滑らかな遷移となる．
+パラメータ $k$ は関数の応答感度を制御し，Fig. \ref{sigmoid} に示すようにその値が大きいほど難易度判定の境界が急峻になり，小さいほど滑らかな遷移となる．
 
 この制御により，難しい画像（$D_{n} ^ {\text{norm}}$が大きい）に対しては，大きな$\epsilon$を割り当て，
 損失関数の勾配を急峻にする．これは，同じ予測誤差に対して
@@ -137,7 +138,9 @@ $\sigma_D$ による除算は尺度の統一であり，
 
 \begin{figure}
     \includegraphics[width=\columnwidth]{figure/sigmoid_sensitivity.pdf}
-    \caption{Sigmoid-based control function for loss shape parameter $\epsilon$}
+    \caption{Sigmoid-based control function mapping normalized difficulty scores to the loss shape parameter $\epsilon$.
+    The slope parameter $k$ controls the sharpness of the transition: larger $k$ yields a more binary assignment,
+    while smaller $k$ produces a gradual mapping. The function is bounded within $[\epsilon_{\text{min}}, \epsilon_{\text{max}}]$ to ensure stable training.}
     \label{sigmoid}
 \end{figure}
 
@@ -167,65 +170,73 @@ $E_0 = 0$の場合は，最初のエポックから適応的制御を開始す�
 
 ここで，$\mathcal{L}_{\text{PolyDice-1}}(\cdot; \epsilon_n)$ はパラメータ $\epsilon_n$ を適用した単一画像の損失関数を表す．
 このように，バッチ内の各画像に対して異なる $\epsilon_n$ を適用することで，
-難易度が高いと判定された画像には急峻な勾配を，低い画像には緩やかな勾配を同時に与えることが可能となる．
+現時点で確信を持てない画像には急峻な勾配を，既に安定した予測が可能な画像には緩やかな勾配を同時に与えることが可能となる．
 最終的に，この損失関数 $\mathcal{L}$ に基づく勾配降下法により，モデルパラメータ $\mathbf{W}$ が最適化される．
 このサイクルを繰り返すことで，モデルの学習に応じて困難な画像の学習を重点的に行うことが可能となる．
 
 \clearpage
 
 \begin{algorithm}[t]
-    \caption{Uncertainty-based Adaptive PolyDice-1 Loss Learning Algorithm}
+    \caption{Training procedure for the proposed uncertainty-based adaptive PolyDice-1 Loss framework}
     \label{alg:proposed_method}
-    \begin{algorithmic}[1]
-        \small
-        \Require Training dataset $\mathcal{D} = \{(\mathbf{X}_n, \mathbf{Y}_n)\}_{n=1}^{N}$
-        \Require Model $f_{\mathbf{W}}$, Max epochs $E$
-        \Require \textbf{Hyperparameters:} Dropout probability $p$, Start epoch $E_0$, Interval $\tau$, MC iterations $T$, Normalization percentile $q$, Slope $k$, Range $[\epsilon_{\text{min}}, \epsilon_{\text{max}}]$
-        
-        \State Initialize model parameters $\mathbf{W}$
-        \State Initialize loss parameters $\epsilon_n \leftarrow 0$ for all $n \in \{1, \dots, N\}$
-        
-        \For{$e = 1$ \textbf{to} $E$}
-            \If{$e \geq E_0$ \textbf{and} $(e - E_0) \pmod \tau = 0$}
-                \State Set model to evaluation mode (enable Dropout)
+    \centering % 中央揃え
+    
+    % ▼▼▼ ここで倍率を指定（0.85 = 85%のサイズ）▼▼▼
+    % ページ番号と被る場合は、0.8 や 0.75 に下げてください
+    \scalebox{0.95}{
+        % scaleboxの中にalgorithmicを入れるためにminipageが必要
+        \begin{minipage}{\linewidth} 
+            \begin{algorithmic}[1]
+                \small
+                \Require Training dataset $\mathcal{D} = \{(\mathbf{X}_n, \mathbf{Y}_n)\}_{n=1}^{N}$, Model $f_{\mathbf{W}}$, Max epochs $E$
+                \Require \textbf{Hyperparameters:} Dropout probability $p$, Start epoch $E_0$, Interval $\tau$, MC iterations $T$, Normalization percentile $q$, Slope $k$, Range $[\epsilon_{\text{min}}, \epsilon_{\text{max}}]$
                 
-                \For{$n = 1$ \textbf{to} $N$}
-                    \For{$t = 1$ \textbf{to} $T$}
-                        \State $\hat{\mathbf{Y}}^{(t)} = f_{\mathbf{W}}(\mathbf{X}_n; \mathbf{z}^{(t)}), \quad \mathbf{z}^{(t)} \sim \text{Bernoulli}(1-p)$
-                    \EndFor
-                    
-                    \State Calculate pixel-wise Mutual Information (Eq. 9):
-                    \State $I_{n, i,j} = H\left( \frac{1}{T} \sum_{t=1}^{T} \hat{y}_{n, i,j}^{(t)} \right) - \frac{1}{T} \sum_{t=1}^{T} H\left( \hat{y}_{n, i,j}^{(t)} \right)$
-                    
-                    \If{positive region $\mathcal{P}_n \neq \emptyset$}
-                        \State Compute $\mu_{\mathcal{P}_n}, \sigma_{\mathcal{P}_n}$ from $\{I_{n,i,j} \mid (i,j) \in \mathcal{P}_n\}$
-                        \State Identify valid pixels: $\mathcal{P}_n' = \{(i,j) \in \mathcal{P}_n \mid |I_{n,i,j} - \mu_{\mathcal{P}_n}| \leq 2\sigma_{\mathcal{P}_n} \}$
-                        \State $D_n = \frac{1}{|\mathcal{P}_n'|} \sum_{(i,j) \in \mathcal{P}_n'} I_{n, i,j}$
+                % 文法ミス（カンマ重複）を修正しました
+                \State Initialize model parameters $\mathbf{W}$; set $\epsilon_n \leftarrow 0$ for all $n \in \{1, \dots, N\}$
+                
+                \For{$e = 1$ \textbf{to} $E$}
+                    \If{$e \geq E_0$ \textbf{and} $(e - E_0) \pmod \tau = 0$}
+                        \State Set model to evaluation mode (enable Dropout)
+                        
+                        \For{$n = 1$ \textbf{to} $N$}
+                            \For{$t = 1$ \textbf{to} $T$}
+                                \State $\hat{\mathbf{Y}}^{(t)} = f_{\mathbf{W}}(\mathbf{X}_n; \mathbf{z}^{(t)}), \quad \mathbf{z}^{(t)} \sim \text{Bernoulli}(1-p)$
+                            \EndFor
+                            
+                            \State Calculate pixel-wise Mutual Information (Eq. 9):
+                            \State $I_{n, i,j} = H\left( \frac{1}{T} \sum_{t=1}^{T} \hat{y}_{n, i,j}^{(t)} \right) - \frac{1}{T} \sum_{t=1}^{T} H\left( \hat{y}_{n, i,j}^{(t)} \right)$
+                            
+                            \If{positive region $\mathcal{P}_n \neq \emptyset$}
+                                \State Compute $\mu_{\mathcal{P}_n}, \sigma_{\mathcal{P}_n}$ from $\{I_{n,i,j} \mid (i,j) \in \mathcal{P}_n\}$
+                                \State Identify valid pixels: $\mathcal{P}_n' = \{(i,j) \in \mathcal{P}_n \mid |I_{n,i,j} - \mu_{\mathcal{P}_n}| \leq 2\sigma_{\mathcal{P}_n} \}$
+                                \State $D_n = \frac{1}{|\mathcal{P}_n'|} \sum_{(i,j) \in \mathcal{P}_n'} I_{n, i,j}$
+                            \Else
+                                \State $D_n \leftarrow 0$ \Comment{Handle negative samples}
+                            \EndIf
+                        \EndFor
+
+                        \State \textbf{Step 2: Normalization \& $\epsilon$ Update}
+                        \State Compute $q$-percentile $D_q$ and std $\sigma_D$ from $\{D_n\}_{n=1}^N$
+                        \For{$n = 1$ \textbf{to} $N$}
+                            \State Normalize score (Eq. 13): $D_{n, \text{norm}} = \frac{D_n - D_{q}}{\sigma_D + \delta}$
+                            \State Update $\epsilon_n$ (Eq. 14): $\epsilon_n \leftarrow \epsilon_{\text{min}} + (\epsilon_{\text{max}} - \epsilon_{\text{min}}) \sigma(k \cdot D_{n, \text{norm}})$
+                        \EndFor
                     \Else
-                        \State $D_n \leftarrow 0$ \Comment{Handle negative samples}
+                        \State \Comment{Keep current $\epsilon_n$ (Note: $\epsilon_n=0$ if $e < E_0$)}
                     \EndIf
-                \EndFor
 
-                \State \textbf{Step 2: Normalization \& $\epsilon$ Update}
-                \State Compute $q$-percentile $D_q$ and std $\sigma_D$ from $\{D_n\}_{n=1}^N$
-                \For{$n = 1$ \textbf{to} $N$}
-                    \State Normalize score (Eq. 13): $D_{n, \text{norm}} = \frac{D_n - D_{q}}{\sigma_D + \delta}$
-                    \State Update $\epsilon_n$ (Eq. 14): $\epsilon_n \leftarrow \epsilon_{\text{min}} + (\epsilon_{\text{max}} - \epsilon_{\text{min}}) \sigma(k \cdot D_{n, \text{norm}})$
+                    \State
+                    \State Set model to training mode (disable MC Dropout)
+                    \For{each minibatch $\mathcal{B} \subset \{1, \dots, N\}$}
+                        \State Compute batch loss with sample-specific $\epsilon_n$ (Eq. 15):
+                        \State \quad $\mathcal{L} = \frac{1}{|\mathcal{B}|} \sum_{n \in \mathcal{B}} \mathcal{L}_{\text{PolyDice-1}}(\hat{\mathbf{Y}}_n, \mathbf{Y}_n; \epsilon_n)$
+                        \State Update parameters: $\mathbf{W} \leftarrow \mathbf{W} - \eta \nabla_{\mathbf{W}} \mathcal{L}$
+                    \EndFor
                 \EndFor
-            \Else
-                \State \Comment{Keep current $\epsilon_n$ (Note: $\epsilon_n=0$ if $e < E_0$)}
-            \EndIf
-
-            \State
-            \State Set model to training mode (disable MC Dropout)
-            \For{each minibatch $\mathcal{B} \subset \{1, \dots, N\}$}
-                \State Compute batch loss with sample-specific $\epsilon_n$ (Eq. 15):
-                \State \quad $\mathcal{L} = \frac{1}{|\mathcal{B}|} \sum_{n \in \mathcal{B}} \mathcal{L}_{\text{PolyDice-1}}(\hat{\mathbf{Y}}_n, \mathbf{Y}_n; \epsilon_n)$
-                \State Update parameters: $\mathbf{W} \leftarrow \mathbf{W} - \eta \nabla_{\mathbf{W}} \mathcal{L}$
-            \EndFor
-        \EndFor
-        \State \Return Trained parameters $\mathbf{W}$
-    \end{algorithmic}
+                \State \Return Trained parameters $\mathbf{W}$
+            \end{algorithmic}
+        \end{minipage}
+    }
 \end{algorithm}
 
 \clearpage
