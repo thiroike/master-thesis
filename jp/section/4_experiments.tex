@@ -50,7 +50,7 @@ $\epsilon_{\text{min}}=0$, $\epsilon_{\text{max}}=0.5$, $k=2$とした．
 \subsubsection{評価指標}
 
 またセグメンテーションの性能の評価には，領域の重なりを測るDice係数およびIoU（Intersection over Union）および検出精度を測るPrecisionおよびRecallを用いた．
-画像$n$に対するモデルの予測マップ $$\hat{\mathbf{Y}}_n$$に対し，閾値 $\theta_\text{th} = 0.5$ で二値化した予測マスク $\tilde{Y}_n = \{\tilde{y}_{n,i,j}\}$ とする．
+画像$n$に対するモデルの予測マップ $\hat{\mathbf{Y}}_n$に対し，閾値 $\theta_\text{th} = 0.5$ で二値化した予測マスク $\tilde{Y}_n = \{\tilde{y}_{n,i,j}\}$ とする．
 画像$n$に対する真陽性 (TP)，偽陽性 (FP)，偽陰性 (FN) の画素数はそれぞれ以下で定義される．
 
 \begin{align}
@@ -121,12 +121,15 @@ $\epsilon_{\text{min}}=0$, $\epsilon_{\text{max}}=0.5$, $k=2$とした．
 
 \subsubsection{比較手法との性能比較}
 Table~\ref{tab:benchmark_cvc_clinicdb} および Table~\ref{tab:benchmark_kvasir_seg} に，各データセットにおける比較手法との性能比較を示す．両データセットにおいて，
-提案法は全ての比較手法を上回る性能を達成した．Focal Loss は両データセットにおいて Dice Loss を下回る結果となった．
-特に注目すべきは，テストデータに対して最適な固定$\epsilon$を事後探索したPolyDice-1 Loss (optimal) をも上回った点である（Fig. \ref{fig:epsilon_comparison}）．
+提案法は全ての比較手法を上回る性能を達成した．
+特に注目すべきは，テストデータに対して最適な固定$\epsilon$を事後探索したPolyDice-1 Loss (optimal) をも上回った点である．
+図 \ref{fig:epsilon_comparison} に，提案法と，様々な固定 $\epsilon$ 値を用いた PolyDice-1 Loss との性能比較を示す．
+両データセットにおいて，提案法は事後的に最適化された $\epsilon$ 値を含むすべての固定された設定を一貫して上回る性能を達成した．
 固定$\epsilon$では全画像に同一の勾配特性が適用されるため，
 容易な画像への過学習と困難な画像の学習不足が同時に生じうる．さらに，学習進行に伴い各画像の相対的な難易度は変化するが，
 固定 $\epsilon$ ではこの変化に追従できない．提案法は$\tau$エポックごとに難易度を再評価し，$\epsilon$を動的に更新することで，これらの問題を回避している．
 
+Focal Loss は両データセットにおいて Dice Loss を下回る結果となった．
 なお，Focal Loss は容易なサンプルの損失を低減することでクラス不均衡に対処する手法であるが，セグメンテーションタスクでは画像単位ではなくピクセル単位で生じる．
 そのため，ピクセルの予測不確実性のみに基づく重み付では，画像全体としてのセグメンテーション難易度を適切に反映できなかったと考えられる．
 
@@ -174,15 +177,6 @@ Fig. \ref{fig:convergence_ci99}に結果を示す．Easy群およびMedium群で
 
 \clearpage
 
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\linewidth]{figure/fig_epsilon_comparison.pdf}
-    \caption{Comparison of segmentation performance (Dice coefficient) between the proposed adaptive method and PolyDice-1 Loss with various fixed $\epsilon$ values. The left graph shows the results for the CVC-ClinicDB dataset, and the right graph shows the results for the Kvasir-SEG dataset. The red dashed line represents the performance of the proposed method, demonstrating robustness comparable to or exceeding the optimal fixed parameter settings.}
-    \label{fig:epsilon_comparison}
-\end{figure}
-
-\clearpage
-
 \begin{table}[t]
     \centering
     \caption{Performance Comparison with Existing Loss Functions on CVC-ClinicDB Dataset}
@@ -218,6 +212,15 @@ Fig. \ref{fig:convergence_ci99}に結果を示す．Easy群およびMedium群で
     \bottomrule
     \end{tabular}
 \end{table}
+
+\clearpage
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{figure/fig_epsilon_comparison.pdf}
+    \caption{Comparison of segmentation performance (Dice coefficient) between the proposed adaptive method and PolyDice-1 Loss with various fixed $\epsilon$ values. The left graph shows the results for the CVC-ClinicDB dataset, and the right graph shows the results for the Kvasir-SEG dataset. The red dashed line represents the performance of the proposed method.}
+    \label{fig:epsilon_comparison}
+\end{figure}
 
 \clearpage
 

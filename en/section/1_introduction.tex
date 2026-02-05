@@ -23,7 +23,7 @@ and second, a difficulty metric to evaluate how challenging each image is for th
 In this study, we propose an adaptive learning framework that integrates these two elements.
 For controlling the shape of the loss function, we employ PolyDice Loss~\cite{polydice},
 which is obtained by the polynomial expansion of Dice Loss. PolyDice Loss is suitable for adaptive learning
-because it allows for continuous control of the loss function's shape using optimal parameters for each image.
+because it allows for continuous control of the loss function's shape using image-specific parameters.
 To quantify difficulty, we use uncertainty estimation via Monte Carlo （MC）Dropout~\cite{pmlr-v48-gal16}.
 MC Dropout enables the efficient estimation of the model's epistemic uncertainty by enabling dropout during inference.
 This uncertainty reflects the degree of the model's lack of confidence in segmenting the image and can be utilized as an indicator of segmentation difficulty.
@@ -34,7 +34,7 @@ The main contributions of this study are as follows:
 \begin{enumerate}
     \item \textbf{Introduction of a dynamic quantification method for image difficulty based on uncertainty:}
     We propose a method to estimate epistemic uncertainty during inference using MC Dropout and quantify it as image-level ``learning difficulty.'' 
-    This enables the objective evaluation of the diverse segmentation difficulties of medical images based on the model's own confidence.
+    This enables objective evaluation of diverse segmentation difficulties in medical images based on the model's confidence.
 
     \item \textbf{Construction of an adaptive control framework for the loss function based on difficulty:}
     We constructed a learning framework that adaptively controls the shape parameter of the PolyDice Loss based on the quantified difficulty metric.

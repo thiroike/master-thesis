@@ -116,13 +116,15 @@ For each metric, we report the average value over the entire test dataset.
 
 \subsubsection{Performance Comparison with Existing Methods}
 Table \ref{tab:benchmark_cvc_clinicdb} and Table \ref{tab:benchmark_kvasir_seg} show the performance comparison with existing methods on each dataset.
-On both datasets, the proposed method achieved performance surpassing all comparative methods. Focal Loss resulted in lower performance than Dice Loss on both datasets.
+On both datasets, the proposed method achieved performance surpassing all comparative methods.
 Particularly noteworthy is that the proposed method outperformed PolyDice-1 Loss (optimal), which retrospectively searched for the optimal fixed $\epsilon$ for the test data.
+Fig. \ref{fig:epsilon_comparison} illustrates the performance comparison between the proposed adaptive method and PolyDice-1 Loss with various fixed $\epsilon$ values.
+On both datasets, the proposed method consistently outperforms all fixed $\epsilon$ settings, including the retrospectively optimized values.
 With a fixed $\epsilon$, the same gradient characteristics are applied to all images, which can simultaneously lead to overfitting on easy images and underfitting on difficult images.
 Furthermore, although the relative difficulty of each image changes as learning progresses, a fixed $\epsilon$ cannot follow this change.
 The proposed method avoids these problems by re-evaluating the difficulty every $\tau$ epochs and dynamically updating $\epsilon$.
 
-Note that while Focal Loss addresses class imbalance by reducing the loss of easy samples,
+Focal Loss resulted in lower performance than Dice Loss on both datasets. Note that while Focal Loss addresses class imbalance by reducing the loss of easy samples,
 this imbalance occurs on a pixel-wise basis rather than an image-wise basis in segmentation tasks.
 Therefore, it is considered that weighting based solely on pixel prediction uncertainty could not appropriately reflect the segmentation difficulty of the image as a whole.
 
@@ -174,15 +176,6 @@ This dynamic gradient adjustment is considered to have effectively promoted the 
 
 \clearpage
 
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\linewidth]{figure/fig_epsilon_comparison.pdf}
-    \caption{Comparison of segmentation performance (Dice coefficient) between the proposed adaptive method and PolyDice-1 Loss with various fixed $\epsilon$ values. The left graph shows the results for the CVC-ClinicDB dataset, and the right graph shows the results for the Kvasir-SEG dataset. The red dashed line represents the performance of the proposed method, demonstrating robustness comparable to or exceeding the optimal fixed parameter settings.}
-    \label{fig:epsilon_comparison}
-\end{figure}
-
-\clearpage
-
 \begin{table}[t]
     \centering
     \caption{Performance comparison with existing loss functions on CVC-ClinicDB dataset}
@@ -218,6 +211,15 @@ This dynamic gradient adjustment is considered to have effectively promoted the 
     \bottomrule
     \end{tabular}
 \end{table}
+
+\clearpage
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{figure/fig_epsilon_comparison.pdf}
+    \caption{Comparison of segmentation performance (Dice coefficient) between the proposed adaptive method and PolyDice-1 Loss with various fixed $\epsilon$ values. The left graph shows the results for the CVC-ClinicDB dataset, and the right graph shows the results for the Kvasir-SEG dataset. The red dashed line represents the performance of the proposed method.}
+    \label{fig:epsilon_comparison}
+\end{figure}
 
 \clearpage
 
